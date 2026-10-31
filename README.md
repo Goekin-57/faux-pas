@@ -1,4 +1,4 @@
-# Faux Pas
+# NOT SO FAST!
 
 Jeu de plateforme « troll » pour navigateur : le sol ment, les panneaux mentent, même la mascotte triche.
 

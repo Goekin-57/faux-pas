@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Faux Pas</title>
+<title>NOT SO FAST!</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -147,11 +147,13 @@ body[data-input="pad"] :is(button,input,.ctab,.citem):focus{outline:3px solid va
 /* ---- menu principal ---- */
 #menu{background:radial-gradient(ellipse 80% 70% at 50% 45%,rgba(29,26,57,.6),rgba(29,26,57,.93))}
 .menu2{max-width:min(100%,880px);gap:clamp(6px,1.1vw,12px)}
-.logo{font-family:var(--f-display);font-weight:400;font-size:clamp(36px,7.6vw,80px);line-height:.95;margin:0;color:var(--sun);text-shadow:4px 4px 0 var(--pink),8px 8px 0 rgba(29,26,57,.6);white-space:nowrap}
+.logo{font-family:var(--f-display);font-weight:400;font-size:clamp(30px,6.2vw,66px);line-height:.95;margin:0;color:var(--sun);text-shadow:4px 4px 0 var(--pink),8px 8px 0 rgba(29,26,57,.6);white-space:nowrap}
 .logo .pas{display:inline-block}
 .logo .pas i{font-style:normal;display:inline-block;animation:wob 2.6s ease-in-out infinite}
 .logo .pas i:nth-child(2){animation-delay:.18s}
 .logo .pas i:nth-child(3){animation-delay:.36s}
+.logo .pas i:nth-child(4){animation-delay:.54s}
+.logo .pas i:nth-child(5){animation-delay:.72s}
 .logo .pas i:first-child{transform-origin:15% 100%;animation:trip 5.5s ease-in-out infinite}
 @keyframes wob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7%)}}
 @keyframes trip{0%,74%,100%{transform:none}78%{transform:rotate(-16deg)}83%{transform:rotate(14deg) translateY(30%)}88%{transform:rotate(-5deg) translateY(4%)}93%{transform:none}}
@@ -184,7 +186,7 @@ body[data-input="pad"] :is(button,input,.ctab,.citem):focus{outline:3px solid va
 .opts .ghost{font-size:11px}
 @media (max-width:640px){.mgrid{grid-template-columns:1fr}}
 @media (max-height:480px){
-  body.m .logo{font-size:32px} body.m .menu2{gap:4px} body.m .bigplay{font-size:17px;padding:6px 18px} body.m .bigplay::after{inset:-5px}
+  body.m .logo{font-size:26px} body.m .menu2{gap:4px} body.m .bigplay{font-size:17px;padding:6px 18px} body.m .bigplay::after{inset:-5px}
   body.m .mbtns .btn{font-size:12px;padding:4px 10px} body.m .pr{font-size:10px} body.m .pr .nm{font-size:9px;margin-bottom:1px} body.m .prog{gap:3px}
   body.m .event{padding:4px 10px 4px 6px} body.m .event canvas{width:34px;height:31px} body.m .event b{font-size:13px}
   body.m .who{padding:3px 10px 3px 6px} body.m .who canvas{width:36px;height:36px} body.m .who b{font-size:15px}
@@ -233,7 +235,7 @@ body.m.portrait .overlay.top,body.m.portrait .overlay.bottom{place-items:start c
 
 <main class="wrap">
   <header class="bar">
-    <h1>Faux Pas</h1>
+    <h1>NOT SO FAST!</h1>
     <div class="stats">
       <span class="chip">Niveau <b id="lvl">1-1</b></span>
       <span class="chip">Morts <b id="deaths">0</b></span>
@@ -262,7 +264,7 @@ body.m.portrait .overlay.top,body.m.portrait .overlay.bottom{place-items:start c
 
     <div class="overlay" id="menu">
       <div class="card menu2">
-        <h2 class="logo" aria-label="Faux Pas"><span>Faux</span> <span class="pas" aria-hidden="true"><i>P</i><i>a</i><i>s</i></span></h2>
+        <h2 class="logo" aria-label="NOT SO FAST!"><span>NOT SO</span> <span class="pas" aria-hidden="true"><i>F</i><i>A</i><i>S</i><i>T</i><i>!</i></span></h2>
         <p class="tagline" id="tagline">Le jeu où le sol ment.</p>
         <div class="mgrid">
           <div class="mcol">
@@ -1513,7 +1515,7 @@ body.m.portrait .overlay.top,body.m.portrait .overlay.bottom{place-items:start c
       });
       if (k === 4) { ctx.strokeStyle = 'rgba(160,255,90,.6)'; ctx.lineWidth = 2; for (let i = 0; i < 60; i++) { const rx = (i * 83 + t * 40) % W, ry = frac(t * 1.2 + i * 0.13) * H; ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry + 12); ctx.stroke(); } }
       if (k >= 5 && k !== 7) {         // néons
-        [[180, 170, 'FAUX PAS', '#ff4f87'], [650, 210, 'OUVERT 24/7', '#28dcff']].forEach(([nx, ny, txt, c], i) => {
+        [[180, 170, 'NOT SO FAST', '#ff4f87'], [650, 210, 'OUVERT 24/7', '#28dcff']].forEach(([nx, ny, txt, c], i) => {
           const on = Math.sin(t * (3 + i) + i) > -0.6; ctx.font = `22px ${DISPLAY}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
           ctx.shadowColor = c; ctx.shadowBlur = on && !lite ? 18 : 0; ctx.fillStyle = on ? c : 'rgba(255,255,255,.15)'; ctx.fillText(txt, nx, ny); ctx.shadowBlur = 0;
         });
@@ -3861,7 +3863,7 @@ body.m.portrait .overlay.top,body.m.portrait .overlay.bottom{place-items:start c
     sfx.click();
   }));
   $('copy').addEventListener('click', () => {
-    const text = `J'ai fini Faux Pas avec ${totalStars()}/${N * 3} étoiles et ${totalDeaths()} morts. Tu fais mieux ?`;
+    const text = `J'ai fini NOT SO FAST! avec ${totalStars()}/${N * 3} étoiles et ${totalDeaths()} morts. Tu fais mieux ?`;
     const fallback = () => { const inp = $('shareText'); inp.value = text; inp.hidden = false; inp.select(); $('copied').textContent = 'Sélectionne et copie ce texte.'; };
     try { navigator.clipboard.writeText(text).then(() => { $('copied').textContent = 'Score copié.'; }, fallback); } catch (e) { fallback(); }
   });
