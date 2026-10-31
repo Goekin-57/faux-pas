@@ -13,8 +13,14 @@ Jeu de plateforme « troll » pour navigateur : le sol ment, les panneaux menten
 
 ## Graphismes
 
-Le chapitre 1 utilise les images du **New Platformer Pack** de [Kenney](https://kenney.nl/assets/new-platformer-pack), sous licence CC0 (usage libre, même commercial). Elles sont intégrées dans `index.html` sous forme d'un seul atlas. Les autres chapitres gardent le dessin d'origine pour l'instant.
-Dans Paramètres, « Graphismes : nouveaux / classiques » permet de comparer les deux rendus.
+- **Chapitre 1** : images uniques créées pour le jeu (dossier `images/chapitre-1`), préparées par `outils/habillage/art.py` (détourage, découpe, raccords) et intégrées dans `index.html`.
+- L'ennemi escargot vient encore du **New Platformer Pack** de [Kenney](https://kenney.nl/assets/new-platformer-pack) (licence CC0).
+- Les autres chapitres gardent le dessin d'origine pour l'instant.
+- Dans Paramètres, « Graphismes : nouveaux / classiques » permet de comparer.
+
+## Version Phaser (WebGL)
+
+`phaser/index.html` est le même jeu, avec le moteur **Phaser 3.90** pour l'affichage du chapitre 1 : décor en parallaxe sur deux plans, sol et pics dessinés en WebGL, poussière à l'atterrissage, éclats quand un bloc piégé tombe, étincelles sur les pièces, vignette. La physique et les pièges restent ceux du jeu d'origine. Elle se régénère avec `python3 outils/build-phaser.py`.
 
 ## Remarque
 
