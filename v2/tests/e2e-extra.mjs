@@ -53,8 +53,8 @@ const route = (steps) => p.evaluate(async (steps) => {
     for (let i = 0; i < 600; i++) {
       await fr(); best = Math.min(best, pl.y);
       if (st.until === 'x' && pl.x >= st.v) break;
-      if (st.until === 'fall' && pl.body.velocity.y > 0) break;
-      if (st.until === 'ground' && pl.onGround && pl.body.velocity.y >= 0) break;
+      if (st.until === 'fall' && i > 2 && pl.body.velocity.y > 0 && !pl.onGround) break;
+      if (st.until === 'ground' && i > 2 && pl.onGround && pl.body.velocity.y >= 0) break;
       if (st.until === 'frames' && i >= st.v) break;
     }
   }
@@ -72,7 +72,7 @@ await p.evaluate(() => { const g = window.__NSF; g.scene.restart(); });
 await wait(1500);
 const J = (x) => [{ ax: 1, until: 'x', v: x }, { jump: true, until: 'fall' }, { jump: false, until: 'ground' }];
 const full = await route([
-  ...J(630), ...J(1040), { ax: 1, until: 'x', v: 1330 }, { until: 'ground' }, ...J(1640), ...J(1790),
+  ...J(630), ...J(1040), { ax: 1, until: 'x', v: 1330 }, { until: 'ground' }, ...J(1620), ...J(1790),
   { ax: 1, until: 'x', v: 2500 }, { ax: 0, until: 'frames', v: 50 }, { ax: -1, until: 'frames', v: 20 }, { ax: 0, until: 'ground' },
   { ax: 1, until: 'x', v: 2620 }, { ax: 0.6, until: 'ground' }, ...J(2845), { ax: 1, until: 'x', v: 3200 }, { until: 'ground' },
   ...J(3250), { ax: 1, until: 'x', v: 3995 }, { ax: 0, until: 'frames', v: 140 }, { ax: 1, until: 'x', v: 4240 }, { ax: 0, until: 'frames', v: 120 },
