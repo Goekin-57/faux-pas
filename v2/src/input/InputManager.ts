@@ -24,6 +24,7 @@ class Input {
   private prev = new Map<Action, boolean>();
   private padPrev: boolean[] = [];
   private repeatT = 0;
+  private navBlocked = false;   // après un changement d'écran, une direction encore maintenue ne compte pas
   device: Device = 'keyboard';
   padName = '';
   private listeners: ((d: Device) => void)[] = [];
@@ -87,7 +88,8 @@ class Input {
   // direction de navigation dans les menus, avec répétition quand on maintient
   nav(): { x: number; y: number } | null {
     const d = { x: (this.held('right') ? 1 : 0) - (this.held('left') ? 1 : 0), y: (this.held('down') ? 1 : 0) - (this.held('up') ? 1 : 0) };
-    if (!d.x && !d.y) return null;
+    if (!d.x && !d.y) { this.navBlocked = false; return null; }
+    if (this.navBlocked) return null;
     const fresh = this.pressed('left') || this.pressed('right') || this.pressed('up') || this.pressed('down');
     if (fresh) { this.repeatT = 0.38; return d; }
     if (this.repeatT <= 0) { this.repeatT = 0.13; return d; }
@@ -95,7 +97,7 @@ class Input {
   }
 
   // oublie les touches en cours (évite qu'une touche maintenue valide l'écran suivant)
-  swallow(): void { this.prev = new Map(this.now); for (const a of ACTIONS) this.prev.set(a, true); }
+  swallow(): void { this.prev = new Map(this.now); for (const a of ACTIONS) this.prev.set(a, true); this.navBlocked = true; }
 }
 
 export const InputManager = new Input();

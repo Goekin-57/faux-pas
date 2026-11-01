@@ -52,6 +52,9 @@ export function makeHeroTextures(scene: Phaser.Scene): void {
   g.clear(); g.fillStyle(COL.ink, 1); g.fillEllipse(3 * S, 3.5 * S, 5 * S, 6 * S); g.generateTexture('hero_ooh', 6 * S, 7 * S);
   g.clear(); g.lineStyle(2 * S, COL.ink, 1); g.lineBetween(1 * S, 1 * S, 7 * S, 7 * S); g.lineBetween(7 * S, 1 * S, 1 * S, 7 * S); g.generateTexture('hero_x', 8 * S, 8 * S);
   g.clear(); g.fillStyle(0x000000, 0.22); g.fillEllipse(16 * S, 4 * S, 30 * S, 7 * S); g.generateTexture('hero_shadow', 32 * S, 8 * S);
+  // pansement : montre qu'on a pris un coup, sans barre de vie
+  g.clear(); g.fillStyle(COL.outline, 1); g.fillRoundedRect(0, 0, 16 * S, 7 * S, 3 * S); g.fillStyle(0xf6d3a8, 1); g.fillRoundedRect(1 * S, 1 * S, 14 * S, 5 * S, 2 * S);
+  g.fillStyle(0xe2b384, 1); g.fillRect(6 * S, 1 * S, 4 * S, 5 * S); g.generateTexture('hero_band', 16 * S, 7 * S);
   g.destroy();
 }
 
@@ -64,6 +67,7 @@ export class HeroView extends Phaser.GameObjects.Container {
   private pupils: Phaser.GameObjects.Image[] = [];
   private feet: Phaser.GameObjects.Image[] = [];
   private mouth: Phaser.GameObjects.Image;
+  private bands: Phaser.GameObjects.Image[] = [];
   private xs: Phaser.GameObjects.Image[] = [];
   private inner: Phaser.GameObjects.Container;
   shadow: Phaser.GameObjects.Image;
@@ -90,7 +94,8 @@ export class HeroView extends Phaser.GameObjects.Container {
     this.pupils = [-6, 6].map((ex) => scene.add.image(ex, ey, 'hero_pupil').setScale(1 / S));
     this.xs = [-6, 6].map((ex) => scene.add.image(ex, ey, 'hero_x').setScale(1 / S).setVisible(false));
     this.mouth = scene.add.image(1, ey + 10, 'hero_smile').setScale(1 / S).setVisible(false);
-    this.inner.add([...this.feet, this.body_, ...this.eyes, ...this.pupils, ...this.xs, this.mouth]);
+    this.bands = [scene.add.image(-6, -12, 'hero_band').setScale(1 / S).setAngle(-30).setVisible(false), scene.add.image(7, -33, 'hero_band').setScale(1 / S).setAngle(25).setVisible(false)];
+    this.inner.add([...this.feet, this.body_, ...this.eyes, ...this.pupils, ...this.xs, this.mouth, ...this.bands]);
     this.add([this.shadow, this.inner]);
     scene.add.existing(this);
   }
@@ -100,6 +105,8 @@ export class HeroView extends Phaser.GameObjects.Container {
     const ey = id === 'croa' ? -32 : id === 'tomy' ? -24 : -26;
     [...this.eyes, ...this.pupils, ...this.xs].forEach((o) => o.setY(ey)); this.mouth.setY(ey + 10);
   }
+  // nombre de coups reçus (0, 1 ou 2) : un pansement par coup
+  setDamage(n: number): void { this.bands.forEach((b, i) => b.setVisible(i < n)); }
   look(x: number, y: number): void { this.lookX = Phaser.Math.Clamp(x, -1, 1); this.lookY = Phaser.Math.Clamp(y, -1, 1); }
 
   // st : état de déplacement fourni par le contrôleur (ou le menu)

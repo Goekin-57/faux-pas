@@ -10,7 +10,7 @@ export type TrapDef =
   | { type: 'biteFlower'; x: number; y: number }
   | { type: 'lazySpring'; x: number; y: number; power: number }
   | { type: 'fakeCheckpoint'; x: number; y: number; runTo: number }
-  | { type: 'fakeVictory'; x: number; y: number; runTo: number }
+  | { type: 'fakeVictory'; x: number; y: number; bridge: [number, number] }
   | { type: 'invertZone'; x: number; w: number };
 
 export interface LevelDef {
@@ -26,53 +26,46 @@ export interface LevelDef {
 
 const B = (x: number, w: number, y = G, h = 540 - y + 60, trap?: Block['trap']): Block => ({ x, y, w, h, trap });
 
+// Une seule fois chaque gag, du plus simple au plus vicieux :
+// trou → faux sol fissuré → pics cachés → escargot → ressort paresseux → pics qui déménagent → fleur qui mord → fausse sortie en carton.
 export const LEVEL_1: LevelDef = {
-  id: '1-1', world: 1, title: 'Le Pré des Mensonges', width: 4400, height: 600,
+  id: '1-1', world: 1, title: 'Le Pré des Mensonges', width: 3640, height: 600,
   start: { x: 90, y: G },
   blocks: [
-    B(-40, 700),                         // départ
-    B(780, 340),                         // après le premier trou
-    B(1120, 220, G, undefined, 'crumble'),   // faux sol (fissures discrètes)
-    { x: 1150, y: 345, w: 160, h: 30 },  // le chemin sûr passe au-dessus
-    B(1340, 760),                        // pics cachés + escargot
-    B(2100, 360),                        // faux drapeau puis vrai drapeau
-    B(2460, 120),                        // ressort
-    B(2580, 90, 260, 340),               // haut mur à franchir avec le ressort
-    B(2670, 520, 300, 300),              // plateau
-    B(3190, 560),                        // zone des pics qui déménagent
-    { x: 3260, y: 335, w: 120, h: 30 },
-    { x: 3480, y: 330, w: 120, h: 30 },
-    B(3750, 650),                        // fausse victoire et vraie sortie
+    B(-40, 580),                          // départ, puis un premier trou simple
+    B(660, 300),
+    B(960, 200, G, undefined, 'crumble'), // faux sol fissuré
+    { x: 990, y: 345, w: 150, h: 30 },    // le chemin sûr passe au-dessus
+    B(1160, 600),                         // pics cachés puis escargot
+    B(1760, 260),                         // drapeau + ressort
+    B(2020, 90, 260, 340),                // mur qu'on ne passe qu'avec le ressort
+    B(2110, 360, 300, 300),               // plateau
+    B(2470, 680),                         // pics qui déménagent, fleur
+    B(3280, 360),                         // vraie sortie, après le trou caché par la fausse porte
   ],
-  spikes: [
-    { x: 1690, y: G, w: 70, hidden: true, range: 70 },
-    { x: 2900, y: 300, w: 60 },
-  ],
+  spikes: [{ x: 1420, y: G, w: 50, hidden: true, range: 70 }],
   coins: [
-    [300, 360], [340, 340], [380, 360], [720, 330], [760, 300], [1180, 308], [1230, 303], [1280, 308],
-    [1500, 360], [1960, 300], [2000, 280], [2520, 220], [2620, 180], [2760, 240], [2860, 220],
-    [3320, 298], [3540, 292], [3640, 340], [3900, 360], [4040, 360],
+    [380, 360], [600, 320], [1020, 308], [1110, 308], [1600, 330], [1870, 360],
+    [2060, 200], [2300, 250], [2700, 330], [2810, 330], [3380, 360],
   ],
   props: [
-    { type: 'tree', x: 140 }, { type: 'sign', x: 260, text: 'Avance, c\'est tout →' }, { type: 'flower', x: 420 }, { type: 'bush', x: 560 },
-    { type: 'sign', x: 940, text: 'Sol garanti 100 %' }, { type: 'mushroom', x: 1060 },
-    { type: 'tree', x: 1420 }, { type: 'flower', x: 1600 }, { type: 'rock', x: 1880 },
-    { type: 'sign', x: 2445, text: 'Saute dessus →' }, { type: 'bush', x: 2300 },
-    { type: 'tree', x: 3230 }, { type: 'sign', x: 3820, text: 'Fin du niveau →' }, { type: 'tree', x: 4300 },
+    { type: 'tree', x: 150 }, { type: 'sign', x: 300, text: 'Avance, c\'est tout →' },
+    { type: 'sign', x: 880, text: 'Sol garanti 100 %' },
+    { type: 'flower', x: 1680 },
+    { type: 'tree', x: 3590 },
   ],
-  enemies: [{ type: 'snail', x: 1900, y: G, minX: 1820, maxX: 2060 }],
-  checkpoints: [{ x: 2380, y: G }],
-  door: { x: 4250, y: G },
+  enemies: [{ type: 'snail', x: 1660, y: G, minX: 1560, maxX: 1730 }],
+  checkpoints: [{ x: 1800, y: G }],
+  door: { x: 3500, y: G },
   traps: [
-    { type: 'fakeCheckpoint', x: 2180, y: G, runTo: 2700 },
-    { type: 'lazySpring', x: 2510, y: G, power: 980 },
-    { type: 'movingSpikes', positions: [3300, 3420, 3560], y: G, w: 70 },
-    { type: 'biteFlower', x: 3700, y: G },
-    { type: 'fakeVictory', x: 3990, y: G, runTo: 4250 },
+    { type: 'lazySpring', x: 1960, y: G, power: 980 },
+    { type: 'movingSpikes', positions: [2650, 2760, 2870], y: G, w: 70 },
+    { type: 'biteFlower', x: 3000, y: G },
+    { type: 'fakeVictory', x: 3110, y: G, bridge: [3130, 3300] },
   ],
   hints: [
-    { x: 1200, text: 'Les fissures, ce n\'est pas de la déco.' },
-    { x: 1700, text: 'L\'herbe qui tremble cache quelque chose.' },
-    { x: 3400, text: 'Le piège a déménagé. Il fera pareil la prochaine fois.' },
+    { x: 1000, text: 'Les fissures, ce n\'est pas de la déco.' },
+    { x: 1430, text: 'L\'herbe qui tremble cache quelque chose.' },
+    { x: 2780, text: 'Le piège a déménagé. Il recommencera.' },
   ],
 };

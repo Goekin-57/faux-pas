@@ -17,6 +17,7 @@ export interface TrapCtx {
   deathsNear(x: number, r: number): number;
   shake(ms: number, k: number): void;
   burst(x: number, y: number, kind: 'dust' | 'chips' | 'spark' | 'leaf', n?: number): void;
+  addBridge(x: number, y: number, w: number): void;
 }
 export interface Trap { update(dt: number, t: number): void; reset(afterDeath: boolean): void }
 
@@ -117,30 +118,34 @@ class FakeCheckpoint implements Trap {
   reset(): void { /* le gag ne se joue qu'une fois */ }
 }
 
-// Fausse victoire : la porte annonce la fin, puis s'enfuit vers la vraie sortie.
+// Fausse sortie en carton : elle annonce la victoire, puis tombe à plat… et sert de pont au-dessus du trou.
 class FakeVictory implements Trap {
   private door: Phaser.GameObjects.Image;
-  private state: 'idle' | 'fooled' | 'gone' = 'idle';
+  private state: 'idle' | 'fooled' | 'bridge' = 'idle';
   constructor(private c: TrapCtx, private d: Extract<TrapDef, { type: 'fakeVictory' }>) {
     this.door = c.scene.add.image(d.x, d.y + 3, 'door').setOrigin(0.5, 1).setDisplaySize(96, 64).setDepth(5);
   }
-  update(dt: number, t: number): void {
-    if (this.state === 'idle') {
-      this.door.setAngle(Math.sin(t * 7) * 1.2);   // indice : la porte est nerveuse
-      if (near(this.c.player, this.d.x, this.d.y - 20, 30, 50)) {
-        this.state = 'fooled'; const p = this.c.player; p.frozen = true; p.body.setVelocityX(0);
-        AudioManager.play('win'); this.c.banner('NIVEAU RÉUSSI !', CSS.sun);
-        this.c.scene.time.delayedCall(1300, () => {
-          AudioManager.play('fake'); this.c.banner('… OU PAS !', CSS.pink, 'La porte a pris peur.');
-          p.frozen = false;
-          this.c.scene.tweens.add({ targets: this.door, x: this.d.runTo, duration: 900, ease: 'Cubic.In', onComplete: () => { this.door.setVisible(false); this.state = 'gone'; } });
-          this.c.scene.tweens.add({ targets: this.door, y: this.d.y - 10, duration: 110, yoyo: true, repeat: 3 });
-        });
-      }
-    }
-    void dt;
+  update(_dt: number, t: number): void {
+    if (this.state !== 'idle') return;
+    this.door.setAngle(Math.sin(t * 2.2) * 0.8);   // indice : elle tangue un peu, comme un décor mal fixé
+    if (!near(this.c.player, this.d.x, this.d.y - 20, 30, 50)) return;
+    this.state = 'fooled';
+    const p = this.c.player; p.frozen = true; p.body.setVelocityX(0);
+    AudioManager.play('win'); this.c.banner('NIVEAU RÉUSSI !', CSS.sun);
+    this.c.scene.time.delayedCall(1300, () => {
+      AudioManager.play('fake'); this.c.banner('… OU PAS !', CSS.pink, 'C\'était une porte en carton.');
+      p.frozen = false;
+      // la porte bascule vers l'avant et devient un pont
+      this.door.setOrigin(0.5, 1);
+      this.c.scene.tweens.add({ targets: this.door, angle: 90, x: this.d.x + 30, duration: 420, ease: 'Quad.In', onComplete: () => {
+        AudioManager.play('stomp'); this.c.shake(120, 0.006); this.c.burst(this.d.bridge[0] + 60, this.d.y, 'dust', 14);
+        this.c.scene.tweens.add({ targets: this.door, alpha: 0, duration: 200 });
+        this.c.addBridge(this.d.bridge[0], this.d.y, this.d.bridge[1] - this.d.bridge[0]);
+        this.state = 'bridge';
+      } });
+    });
   }
-  reset(): void { if (this.state !== 'idle') { this.door.setVisible(false); } }
+  reset(): void { /* une fois tombée, la porte reste un pont */ }
 }
 
 // Zone de commandes inversées : machine à états (entrée, inversion, sortie) sans oscillation à la frontière.

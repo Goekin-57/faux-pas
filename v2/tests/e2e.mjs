@@ -58,20 +58,20 @@ const vx = await p.evaluate(() => window.__NSF.player.body.velocity.x);
 await p.keyboard.up('ArrowRight');
 check('vitesse de course 260', Math.abs(vx - 260) < 5, vx.toFixed(0));
 // mort dans un trou puis réapparition
-await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(720, 300); g.player.body.reset(720, 300); });
+await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(600, 300); g.player.body.reset(600, 300); });
 await wait(1800);
 const st = await p.evaluate(() => ({ d: window.__NSF.deaths, x: window.__NSF.player.x, dead: window.__NSF.player.dead, hp: window.__NSF.player.hp }));
 check('tomber dans un trou = 1 mort puis réapparition', st.d === 1 && !st.dead && st.x < 200 && st.hp === 3, JSON.stringify(st));
 // faux sol : il tombe quand on marche dessus
-await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(1180, 418); g.player.body.reset(1180, 418); });
+await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(1020, 418); g.player.body.reset(1020, 418); });
 await wait(250); await p.screenshot({ path: OUT + 'v2-crumble.png' });
 await wait(1600);
 check('le faux sol fait tomber', await p.evaluate(() => window.__NSF.deaths) === 2);
 // ennemi : un coup retire un cœur
 await wait(300);
-await p.evaluate(() => { const g = window.__NSF; const s = g.snails[0]; s.x = 1990; s.vx = -45; g.player.rect.setPosition(1880, 418); g.player.body.reset(1880, 418); });
+await p.evaluate(() => { const g = window.__NSF; const s = g.snails[0]; s.x = 1700; s.vx = -45; g.player.rect.setPosition(1580, 418); g.player.body.reset(1580, 418); });
 await p.keyboard.down('ArrowRight'); await wait(500); await p.keyboard.up('ArrowRight'); await wait(200);
-check('l\'escargot retire un cœur', await p.evaluate(() => window.__NSF.player.hp) === 2, String(await p.evaluate(() => window.__NSF.player.hp)));
+check('l\'escargot retire un coup sans tuer (pansement visible)', await p.evaluate(() => window.__NSF.player.hp === 2 && !window.__NSF.player.dead), String(await p.evaluate(() => window.__NSF.player.hp)));
 // pause au clavier
 await p.keyboard.press('Escape'); await wait(400);
 check('Échap met en pause', (await scene()).includes('Pause'), await scene());
@@ -79,12 +79,15 @@ await p.screenshot({ path: OUT + 'v2-pause.png' });
 await p.keyboard.press('Escape'); await wait(300);
 check('Échap reprend', !(await scene()).includes('Pause'));
 // fausse victoire puis vraie sortie
-await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(3940, 418); g.player.body.reset(3940, 418); });
+await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(3060, 418); g.player.body.reset(3060, 418); });
 await p.keyboard.down('ArrowRight'); await wait(500); await p.keyboard.up('ArrowRight');
 await wait(400); await p.screenshot({ path: OUT + 'v2-fakewin.png' });
 await wait(2300);
-await p.evaluate(() => { const g = window.__NSF; g.player.rect.setPosition(4200, 418); g.player.body.reset(4200, 418); });
-await p.keyboard.down('ArrowRight'); await wait(400); await p.keyboard.up('ArrowRight');
+// la porte en carton est devenue un pont : on traverse le trou en marchant
+await p.keyboard.down('ArrowRight'); await wait(1600); await p.keyboard.up('ArrowRight');
+const cross = await p.evaluate(() => ({ x: Math.round(window.__NSF.player.x), y: Math.round(window.__NSF.player.y), d: window.__NSF.deathLog.join(' ') }));
+check('la fausse porte devient un pont au-dessus du trou', cross.x > 3290 && cross.y <= 421, JSON.stringify(cross));
+await p.keyboard.down('ArrowRight'); await wait(900); await p.keyboard.up('ArrowRight');
 await wait(2600);
 const dl = await p.evaluate(() => window.__NSF.deathLog.join(' '));
 console.log('causes des morts :', dl);
@@ -93,7 +96,7 @@ await p.screenshot({ path: OUT + 'v2-results.png' });
 const sv = await p.evaluate(() => JSON.parse(localStorage.getItem('not-so-fast-save-v1')));
 check('résultat sauvegardé', sv.levels['1-1'] && sv.levels['1-1'].done, JSON.stringify(sv.levels['1-1']));
 // une touche maintenue ne valide pas l'écran deux fois ; Entrée → menu
-await p.keyboard.press('Enter'); await wait(1200);
+await wait(1000); await p.keyboard.press('Enter'); await wait(1200);
 check('Entrée sur les résultats → menu', (await scene()).includes('Menu'), await scene());
 check('aucune erreur JavaScript', errs.length === 0, errs.slice(0, 3).join(' | '));
 console.log('RÉUSSIS :\n  ' + ok.join('\n  '));

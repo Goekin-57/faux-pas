@@ -58,7 +58,7 @@ export class Parallax {
     const fs = 0.82, ms = 0.62, ft = scene.textures.get('bg_far').getSourceImage(), mt = scene.textures.get('bg_mid').getSourceImage();
     this.far = scene.add.tileSprite(0, 0, 960 / fs + 4, ft.height, 'bg_far').setOrigin(0, 0).setScale(fs).setScrollFactor(0).setDepth(depth);
     this.farFill = scene.add.rectangle(0, 0, 960, 600, 0x22b268).setOrigin(0, 0).setScrollFactor(0).setDepth(depth);
-    this.mid = scene.add.tileSprite(0, 0, 960 / ms + 4, mt.height, 'bg_mid').setOrigin(0, 0).setScale(ms).setScrollFactor(0).setDepth(depth + 1);
+    this.mid = scene.add.tileSprite(0, 0, 960 / ms + 4, mt.height, 'bg_mid').setOrigin(0, 0).setScale(ms).setScrollFactor(0).setDepth(depth + 1).setAlpha(0.72);   // plan des arbres plus discret
     this.midFill = scene.add.rectangle(0, 0, 960, 600, 0x36c770).setOrigin(0, 0).setScrollFactor(0).setDepth(depth + 1);
     this.update(0, 0);
   }

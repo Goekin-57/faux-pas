@@ -1,6 +1,6 @@
 // Scène de jeu : construit le niveau, gère le joueur, les pièges, les ennemis, la caméra, la mort et la victoire.
 import Phaser from 'phaser';
-import { W, H, COL, CSS, FONT, HEARTS } from '../core/config';
+import { W, H, COL, CSS, FONT } from '../core/config';
 import { InputManager } from '../input/InputManager';
 import { AudioManager } from '../audio/AudioManager';
 import { SaveManager } from '../save/SaveManager';
@@ -38,7 +38,6 @@ export class GameScene extends Phaser.Scene {
   private camY = 0;
   private lookAhead = 0;
   // interface
-  private hearts: Phaser.GameObjects.Image[] = [];
   private coinText!: Phaser.GameObjects.Text;
   private tauntText!: Phaser.GameObjects.Text;
   private tauntT = 0;
@@ -53,7 +52,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.level = LEVEL_1;
-    this.blocks = []; this.spikes = []; this.coins = []; this.snails = []; this.traps = []; this.flags = []; this.hearts = [];
+    this.blocks = []; this.spikes = []; this.coins = []; this.snails = []; this.traps = []; this.flags = [];
     this.fx = null; this.tauntT = 0; this.debugOn = false;
     this.deaths = 0; this.deathXs = []; this.deathLog = []; this.won = false; this.elapsed = 0; this.hintShown.clear();
     const L = this.level;
@@ -93,6 +92,7 @@ export class GameScene extends Phaser.Scene {
       kill: (c) => this.kill(c), hurt: (x) => this.hurt(x), taunt: (t) => this.taunt(t), banner: (t, c, s) => this.banner(t, c, s),
       setCheckpoint: (x, y) => { this.checkpoint = { x, y }; }, deathsNear: (x, r) => this.deathXs.filter((d) => Math.abs(d - x) < r).length,
       shake: (ms, k) => this.shake(ms, k), burst: (x, y, k, n) => this.burst(x, y, k, n),
+      addBridge: (x, y, w) => this.addBridge(x, y, w),
     };
     for (const t of L.traps) this.traps.push(makeTrap(ctx, t));
 
@@ -132,6 +132,13 @@ export class GameScene extends Phaser.Scene {
     this.blocks.push({ def: b, ct, zone, body: zone.body as Phaser.Physics.Arcade.StaticBody, state: 'solid', t: 0 });
   }
 
+  addBridge(x: number, y: number, w: number): void {
+    this.addBlock({ x, y, w, h: 30 });
+    const b = this.blocks[this.blocks.length - 1];
+    this.physics.add.collider(this.player.rect, b.zone);
+    b.ct.setScale(0.2, 1); this.tweens.add({ targets: b.ct, scaleX: 1, duration: 260, ease: 'Back.Out' });
+  }
+
   private addProp(type: string, x: number, y: number, text?: string): void {
     const fit = (k: string, h: number, d = 3) => { const img = this.add.image(x, y + 4, k).setOrigin(0.5, 1).setDepth(d); img.setDisplaySize((h * img.width) / img.height, h); return img; };
     if (type === 'tree') { const t = fit('tree', 118, 2); this.tweens.add({ targets: t, angle: { from: -1, to: 1 }, duration: 2600, yoyo: true, repeat: -1, ease: 'Sine.InOut' }); }
@@ -157,7 +164,6 @@ export class GameScene extends Phaser.Scene {
 
   // ---------------- interface ----------------
   private makeHud(): void {
-    for (let i = 0; i < HEARTS; i++) this.hearts.push(this.add.image(30 + i * 34, 30, 'hud_heart').setDisplaySize(30, 27).setScrollFactor(0).setDepth(100));
     const coinIcon = this.add.image(W - 120, 30, 'coin_gold').setDisplaySize(26, 26).setScrollFactor(0).setDepth(100);
     void coinIcon;
     this.coinText = this.add.text(W - 100, 30, '0', { fontFamily: FONT.display, fontSize: '22px', color: CSS.paper, stroke: CSS.ink, strokeThickness: 6 }).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
@@ -195,7 +201,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   // ---------------- règles ----------------
-  hurt(fromX: number): void { if (this.player.hurt(fromX)) this.kill('hearts'); else { this.shake(120, 0.006); this.refreshHearts(true); } }
+  hurt(fromX: number): void { if (this.player.hurt(fromX)) this.kill('hearts'); else { this.shake(120, 0.006); this.taunt(this.player.hp === 1 ? 'Encore un coup et c\'est fini.' : 'Aïe ! Pas loin.'); } }
   kill(cause: string): void {
     const p = this.player;
     if (p.dead || this.won) return;
@@ -216,18 +222,11 @@ export class GameScene extends Phaser.Scene {
     for (const s of this.spikes) if (s.hidden) s.rise = 0;
     for (const sn of this.snails) { sn.alive = true; sn.x = sn.x0; sn.shellT = 0; sn.img.setVisible(true).setAlpha(1).setAngle(0); }
     this.traps.forEach((t) => t.reset(true));
-    this.refreshHearts(false);
     // après plusieurs morts au même endroit, un conseil (une fois)
     for (const h of this.level.hints) {
       const n = this.deathXs.filter((d) => Math.abs(d - h.x) < 260).length;
       if (n >= 3 && !this.hintShown.has(h.x)) { this.hintShown.add(h.x); this.time.delayedCall(400, () => this.taunt(h.text)); }
     }
-  }
-  private refreshHearts(pop: boolean): void {
-    this.hearts.forEach((h, i) => {
-      const full = i < this.player.hp; h.setTexture(full ? 'hud_heart' : 'hud_heart_empty').setDisplaySize(30, 27);
-      if (pop && i === this.player.hp) this.tweens.add({ targets: h, scale: h.scale * 1.5, duration: 120, yoyo: true });
-    });
   }
   private win(): void {
     if (this.won) return;

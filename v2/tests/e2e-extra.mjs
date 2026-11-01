@@ -36,7 +36,7 @@ await tap(9); await wait(300);
 check('manette : Start reprend', !(await scene()).includes('Pause'));
 // ressort : refuse le premier rebond, propulse sur le mur au second
 const place = (x, y) => p.evaluate(([x, y]) => { const g = window.__NSF; g.player.rect.setPosition(x, y); g.player.body.reset(x, y); }, [x, y]);
-await place(2480, 418); await wait(300);
+await place(1930, 418); await wait(300);
 await axis(1); await wait(260); await axis(0);
 await wait(900);
 const y1 = await p.evaluate(() => window.__NSF.player.y);
@@ -51,8 +51,9 @@ const route = (steps) => p.evaluate(async (steps) => {
     P.axes[0] = st.ax ?? P.axes[0];
     if (st.jump != null) setB(0, st.jump);
     for (let i = 0; i < 600; i++) {
-      await fr(); best = Math.min(best, pl.y);
+      await fr(); best = Math.min(best, pl.y); if (window.__trace) window.__trace.push(`${st.until}:${Math.round(pl.x)},${Math.round(pl.y)},${pl.onGround ? 'g' : 'a'}`);
       if (st.until === 'x' && pl.x >= st.v) break;
+      if (st.until === 'xle' && pl.x <= st.v) break;
       if (st.until === 'fall' && i > 2 && pl.body.velocity.y > 0 && !pl.onGround) break;
       if (st.until === 'ground' && i > 2 && pl.onGround && pl.body.velocity.y >= 0) break;
       if (st.until === 'frames' && i >= st.v) break;
@@ -62,22 +63,24 @@ const route = (steps) => p.evaluate(async (steps) => {
   for (let i = 0; i < 10; i++) await fr();
   return { x: Math.round(pl.x), y: Math.round(pl.y), g: pl.onGround, best: Math.round(best), deaths: g.deathLog.join(' ') };
 }, steps);
-await place(2480, 418); await wait(200);
-const r1 = await route([{ ax: 1, until: 'x', v: 2620 }, { ax: 0.6, until: 'ground' }, { ax: 0, until: 'frames', v: 10 }]);
-check('ressort : le second rebond fait passer le mur', r1.best < 250 && r1.x > 2580 && r1.y <= 300 && r1.g, JSON.stringify(r1));
-const r2 = await route([{ place: [1000, 418], ax: 1, until: 'x', v: 1040 }, { jump: true, until: 'fall' }, { until: 'ground' }, { ax: 0, jump: false, until: 'frames', v: 10 }]);
-check('on passe le faux sol par la plateforme du dessus', r2.best < 330 && r2.g && !r2.deaths && (Math.abs(r2.y - 345) < 3 || r2.x > 1340), JSON.stringify(r2));
+await place(1930, 418); await wait(200);
+const r1 = await route([{ ax: 1, until: 'x', v: 2060 }, { ax: 0.6, until: 'ground' }, { ax: 0, until: 'frames', v: 10 }]);
+check('ressort : le second rebond fait passer le mur', r1.best < 250 && r1.x > 2020 && r1.y <= 300 && r1.g, JSON.stringify(r1));
+const r2 = await route([{ place: [840, 418], ax: 1, until: 'x', v: 885 }, { jump: true, until: 'fall' }, { until: 'ground' }, { ax: 0, jump: false, until: 'frames', v: 10 }]);
+check('on passe le faux sol par la plateforme du dessus', r2.best < 330 && r2.g && !r2.deaths && (Math.abs(r2.y - 345) < 3 || r2.x > 1160), JSON.stringify(r2));
+await p.evaluate(() => { window.__trace = []; });
 // parcours complet du niveau sans téléportation (après la remise à zéro), comme un joueur
 await p.evaluate(() => { const g = window.__NSF; g.scene.restart(); });
 await wait(1500);
 const J = (x) => [{ ax: 1, until: 'x', v: x }, { jump: true, until: 'fall' }, { jump: false, until: 'ground' }];
 const full = await route([
-  ...J(630), ...J(1040), { ax: 1, until: 'x', v: 1330 }, { until: 'ground' }, ...J(1620), ...J(1790),
-  { ax: 1, until: 'x', v: 2500 }, { ax: 0, until: 'frames', v: 50 }, { ax: -1, until: 'frames', v: 20 }, { ax: 0, until: 'ground' },
-  { ax: 1, until: 'x', v: 2620 }, { ax: 0.6, until: 'ground' }, ...J(2845), { ax: 1, until: 'x', v: 3200 }, { until: 'ground' },
-  ...J(3250), { ax: 1, until: 'x', v: 3995 }, { ax: 0, until: 'frames', v: 140 }, { ax: 1, until: 'x', v: 4240 }, { ax: 0, until: 'frames', v: 120 },
+  ...J(500), ...J(885), { ax: 1, until: 'x', v: 1145 }, { ax: 1, until: 'ground' }, ...J(1335), ...J(1530),
+  { ax: 1, until: 'x', v: 1945 }, { ax: 0, until: 'frames', v: 50 }, { ax: -1, until: 'frames', v: 20 }, { ax: 0, until: 'ground' },
+  { ax: 1, until: 'x', v: 2060 }, { ax: 0.6, until: 'ground' }, { ax: 1, until: 'x', v: 2480 }, { ax: 0, until: 'ground' }, { ax: 0, until: 'frames', v: 15 },
+  ...J(2590), { ax: 1, until: 'x', v: 3105 }, { ax: 0, until: 'frames', v: 160 }, { ax: 1, until: 'x', v: 3490 }, { ax: 0, until: 'frames', v: 120 },
 ]);
 await wait(2500);
+if (process.env.TRACE) console.log(await p.evaluate(() => window.__trace.filter((t, i) => i % 3 === 0).slice(0, 200).join(' ')));
 check('un robot finit le niveau sans téléportation', (await scene()).includes('Results'), JSON.stringify(full) + ' ' + (await scene()));
 check('aucune erreur JavaScript', errs.length === 0, errs.join(' | '));
 await b.close();

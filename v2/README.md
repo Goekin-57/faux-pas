@@ -48,8 +48,8 @@ Fait et vérifié par les tests :
 
 - Menu principal vivant : ciel, rayons de soleil, deux plans de parallaxe, fleurs et arbre qui bougent, oiseaux, papillons, escargot qui se cache quand un pic sort, perso animé (respiration, clignement, regard, petit saut, surprise), logo animé dont le « F » trébuche.
 - Boutons : Continuer/Jouer, Nouvelle partie (avec confirmation), Paramètres (volumes, réduction des effets, tremblements), Statistiques. Souris, clavier, manette, tactile.
-- Niveau 1-1 complet : 3 cœurs, invulnérabilité 1,4 s, drapeau de sauvegarde, escargot qu'on écrase, pièces, sortie, écran de résultats avec étoiles, sauvegarde.
-- Pièges : faux sol fissuré, pics cachés (l'herbe tremble), faux drapeau qui s'enfuit, ressort paresseux, pics qui déménagent après une mort, fleur qui mord, fausse victoire et porte qui s'enfuit. Zone de commandes inversées prête (machine à états avec hystérésis), pas encore placée dans un niveau.
+- Niveau 1-1 complet et court (≈ 3 600 px) : pas de barre de vie affichée, mais un ennemi ne tue pas d'un coup (3 coups ; un pansement apparaît sur le perso à chaque coup), invulnérabilité 1,4 s, drapeau de sauvegarde, pièces, écran de résultats avec étoiles, sauvegarde.
+- Un gag différent à chaque étape, sans répétition : trou → faux sol fissuré → pics cachés (l'herbe tremble) → escargot → ressort paresseux → pics qui déménagent après une mort → fleur qui mord → fausse sortie en carton qui tombe et devient un pont. Zone de commandes inversées prête (machine à états avec hystérésis), gardée pour un autre niveau.
 - Physique d'origine : gravité 1800, saut 620, vitesse 260, coyote time, saut mémorisé, saut variable.
 - Pause (Échap / Start), recommencer (R / Y), conseils après plusieurs morts au même endroit.
 

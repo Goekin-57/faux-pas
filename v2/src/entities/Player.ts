@@ -40,7 +40,7 @@ export class Player {
   respawn(x: number, y: number): void {
     this.rect.setPosition(x, y); this.body.reset(x, y); this.body.setVelocity(0, 0);
     this.hp = HEARTS; this.invuln = 0.6; this.dead = false; this.frozen = false; this.hurtT = 0; this.buffer = 0; this.coyote = 0; this.inverted = false;
-    this.view.setVisible(true).setAlpha(1); this.view.mood = 'normal'; this.view.punch(0.7, 1.3);
+    this.view.setVisible(true).setAlpha(1); this.view.mood = 'normal'; this.view.punch(0.7, 1.3); this.view.setDamage(0);
   }
 
   update(dt: number): void {
@@ -85,7 +85,7 @@ export class Player {
     if (this.invuln > 0 || this.dead) return false;
     this.hp--; this.invuln = INVULN; this.hurtT = 0.35; this.view.mood = 'hurt';
     this.body.setVelocity(Math.sign(this.x - fromX || 1) * 220, -320);
-    AudioManager.play('hurt'); this.view.punch(1.3, 0.7);
+    AudioManager.play('hurt'); this.view.punch(1.3, 0.7); this.view.setDamage(HEARTS - this.hp);
     return this.hp <= 0;
   }
   bounce(v: number): void { this.body.setVelocityY(-v); this.springBoost = 0.25; this.coyote = 0; this.view.punch(0.7, 1.35); }
