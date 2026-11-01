@@ -8,10 +8,19 @@ import type { LevelData, StoneDef } from '../types';
  *  - pavé MAT, posé sur un pilier de pierre  → fiable, on peut s'y arrêter ;
  *  - pavé POLI (brillant, arêtes nettes, scintille), posé sur une tige → ne pas s'y attarder.
  *
- * Temps 1 (découverte)   : un pavé poli au-dessus d'un fossé sans danger, puis un chemin poli à traverser.
- * Temps 2 (complication) : une Dionée force à attendre… et l'instinct fait attendre au mauvais endroit.
- * Temps 3 (récompense)   : une haie infranchissable ; il faut VOLONTAIREMENT hésiter sur un pavé
- *                          pour qu'il serve d'ascenseur vers le tunnel. Final : alterner marche et observation.
+ * Les cinq moments (v0.5) :
+ *  1. ACCROCHE (≈ 5 s)  : le PAVÉ FARCEUR au-dessus d'un fossé sans danger. Hésite dessus : il s'enfonce
+ *                         en rigolant ; saute : il te catapulte de l'autre côté. Jamais mortel.
+ *  2. DÉCOUVERTE         : le chemin trop poli (ne pas s'arrêter), puis la première Dionée : le pavé MAT
+ *                         est la bonne place pour attendre.
+ *  3. COMBINAISON        : escalier de pavés polis sous une Dionée, puis la DIONÉE MALADROITE : elle vise
+ *                         le joueur près d'un bouton… s'il s'écarte, elle tape le bouton et ouvre la grille.
+ *  4. PASSAGE DYNAMIQUE  : l'ascenseur à sablier (hésiter EXPRÈS), le tunnel sans s'arrêter, le final rythmé.
+ *  5. FINAL HUMORISTIQUE : la porte esquive si on lui fonce dessus ; si on s'arrête, elle revient vers nous.
+ *                         Qui la poursuit jusqu'au coin se fait renvoyer devant elle par une petite fleur
+ *                         (avant-goût du 1-2).
+ *
+ * Expert : une Dionée de plus au-dessus du chemin trop poli (attendre sur la terre ferme, puis y aller).
  */
 
 const H = 1000;
@@ -63,8 +72,8 @@ export function level1_1(): LevelData {
     ],
 
     stones: [
-      // découverte : un pavé poli seul, au-dessus d'un fossé inoffensif
-      { x: 1180, top: 520, kind: 'polished', base: 680 },
+      // accroche : le pavé farceur, au-dessus d'un fossé inoffensif
+      { x: 1180, top: 520, kind: 'prank', base: 680 },
       // le "chemin trop poli" : on traverse sans s'arrêter
       ...row(1701, G, 860, ['p', 'p', 'p', 'p', 'p', 'p']),
       // Dionée n°1 : le pavé mat d'avant est la bonne place pour attendre
@@ -91,19 +100,31 @@ export function level1_1(): LevelData {
     ],
 
     snappers: [
+      // Expert : combinaison chemin poli + Dionée (on attend sur la terre ferme, jamais sur un pavé poli)
+      { x: 2019, pathY: G, offset: 0.4, only: 'expert' },
       { x: 3125, pathY: G, offset: 0 },
       { x: 4470, pathY: 410, offset: 0.8 },
+      // la Dionée maladroite : bouton sous elle, grille de treillage juste après
+      { x: 4880, pathY: 470, lure: { leverX: 4880, gate: { x: 4990, top: 190, w: 34, h: 280 } } },
       { x: 7439, pathY: G, offset: 0 },
       { x: 7757, pathY: G, offset: 1.55 }
     ],
 
-    // Un seul point de contrôle, au milieu : après les escaliers et la Dionée (la partie la plus
+    // Un seul point de contrôle (Facile), au milieu : après les escaliers et la Dionée (la partie la plus
     // longue à refaire), avant la haie. Les deux premières parties ne sont jamais à refaire.
     checkpoints: [
       { x: 4720, groundY: 470 }
     ],
 
-    exit: { x: 8150, groundY: G, scootTo: 8340 },
+    exit: { x: 8150, groundY: G, scootTo: 8340, gag: 'dodge', maxX: 8430 },
+
+    // la petite fleur du coin : renvoie devant la porte celui qui la poursuit trop vite
+    flowers: [
+      {
+        x: 8566, groundY: G, blow: 'left', size: 'small', palette: 'coral', stare: 0.3, daze: 1.4, power: 1.8,
+        watch: { x: 8436, y: 380, w: 130, h: 200 }, quip: 'La sortie, c’est par là !'
+      }
+    ],
 
     decor: [
       { type: 'can', x: 300, y: G },
@@ -111,7 +132,7 @@ export function level1_1(): LevelData {
       { type: 'bush', x: 1560, y: G, flip: true },
       { type: 'bush', x: 2700, y: G },
       { type: 'can', x: 3560, y: G, flip: true },
-      { type: 'bush', x: 4980, y: 470, flip: true },
+      { type: 'bush', x: 5260, y: G, flip: true },
       { type: 'shaft', x: 5400, y: G, w: 120, h: 248 },
       { type: 'lantern', x: 5800, y: 700 },
       { type: 'mushrooms', x: 5700, y: 780 },
@@ -119,7 +140,6 @@ export function level1_1(): LevelData {
       { type: 'lantern', x: 6200, y: 700 },
       { type: 'mushrooms', x: 6480, y: 780 },
       { type: 'bush', x: 6780, y: 700 },
-      { type: 'bush', x: 8460, y: G, flip: true },
       { type: 'fgLeaf', x: 900, y: H },
       { type: 'fgLeaf', x: 2600, y: H, flip: true },
       { type: 'fgLeaf', x: 4300, y: H },
@@ -130,6 +150,16 @@ export function level1_1(): LevelData {
     darkZones: [{ x: 5520, w: 1040, top: 690, h: 120 }],
 
     hints: [
+      {
+        // la grille : la plante doit taper le bouton
+        id: 'lure',
+        area: { x: 4600, w: 420, yMax: 520 },
+        after: 10,
+        at: { x: 4880, y: 170 },
+        icon: 'eye',
+        text: 'Laisse-la viser le bouton… puis écarte-toi',
+        solvedRightOf: 5030
+      },
       {
         // la haie bloque : il faut rester immobile sur le pavé à sablier pour descendre
         id: 'lift',

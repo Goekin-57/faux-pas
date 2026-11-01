@@ -193,6 +193,46 @@ class AudioEngine {
       case 'boing':
         this.tone(out, t, 'sine', 260, 520, 0.22, 0.07, 14);
         break;
+      // --- v0.5
+      case 'grumble':
+        // une plante qui a raté son coup : grognement vexé
+        this.tone(out, t, 'sawtooth', 110, 90, 0.35, 0.05, 22);
+        this.tone(out, t + 0.18, 'sawtooth', 100, 70, 0.3, 0.04, 18);
+        break;
+      case 'clonk':
+        this.tone(out, t, 'square', 320, 240, 0.09, 0.12);
+        this.bell(out, t + 0.02, 1046, 0.06);
+        this.noise(out, t, 0.06, 1500, 0.18, 'bandpass');
+        break;
+      case 'gate':
+        for (let i = 0; i < 5; i++) this.noise(out, t + i * 0.05, 0.03, 2600, 0.05, 'bandpass');
+        this.tone(out, t, 'triangle', 180, 360, 0.5, 0.08);
+        this.bell(out, t + 0.45, 784, 0.05);
+        break;
+      case 'phew':
+        this.noise(out, t, 0.32, 1400, 0.05, 'bandpass', 0.08);
+        this.tone(out, t, 'sine', 620, 380, 0.3, 0.035);
+        break;
+      case 'spring':
+        this.tone(out, t, 'sine', 180, 720, 0.18, 0.12, 20);
+        this.tone(out, t + 0.04, 'triangle', 360, 1100, 0.14, 0.05);
+        break;
+      case 'suck':
+        this.noise(out, t, 0.9 * k, 900, 0.07, 'bandpass', 0.6);
+        this.tone(out, t, 'triangle', 700, 260, 0.9 * k, 0.04, 5);
+        break;
+      case 'flap':
+        this.noise(out, t, 0.06, 1100, 0.07, 'lowpass');
+        this.noise(out, t + 0.1, 0.06, 1000, 0.06, 'lowpass');
+        break;
+      case 'raft':
+        this.noise(out, t, 0.5, 400, 0.08, 'lowpass', 0.05);
+        this.tone(out, t, 'triangle', 140, 200, 0.4, 0.05);
+        break;
+      case 'shy':
+        this.tone(out, t, 'sine', 900, 1300, 0.12, 0.04);
+        this.tone(out, t + 0.12, 'sine', 1300, 900, 0.14, 0.03);
+        break;
     }
   }
 
@@ -254,7 +294,8 @@ export type SfxName =
   | 'jump' | 'land' | 'step' | 'tileWarn' | 'tileSink' | 'tileRise'
   | 'snapWake' | 'chomp' | 'deathPrick' | 'deathChomp' | 'respawn'
   | 'checkpoint' | 'doorScoot' | 'doorOpen' | 'victory' | 'uiHover' | 'uiClick' | 'bubble'
-  | 'whoosh' | 'logoThud' | 'sneezeIn' | 'sneeze' | 'giggle' | 'boing' | 'liftStart' | 'hourglass' | 'sniff' | 'dazed';
+  | 'whoosh' | 'logoThud' | 'sneezeIn' | 'sneeze' | 'giggle' | 'boing' | 'liftStart' | 'hourglass' | 'sniff' | 'dazed'
+  | 'grumble' | 'clonk' | 'gate' | 'phew' | 'spring' | 'suck' | 'flap' | 'raft' | 'shy';
 
 // ---------- Musique générative douce ----------
 // Serre : pentatonique de Fa, marimba + nappe + basse pizzicato, ~88 BPM.

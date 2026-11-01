@@ -329,7 +329,7 @@ export function paintFlowerHead(palette: PetalPalette = PETALS.peach): HTMLCanva
 }
 
 /** Cœur de la fleur avec son visage : 'calm' | 'inhale' | 'sneeze'. */
-export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze' | 'watch' | 'dazed'): HTMLCanvasElement {
+export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze' | 'watch' | 'dazed' | 'shy' | 'puff'): HTMLCanvasElement {
   const S = 96;
   const [c, ctx] = canvas(S, S);
   const cx = S / 2, cy = S / 2;
@@ -384,6 +384,28 @@ export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze' | 'watch' | '
     ctx.beginPath(); ctx.arc(cx, cy + 16, 7, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
     ctx.fillStyle = '#e8846b';
     ctx.beginPath(); ctx.ellipse(cx + 3, cy + 14, 4, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'shy') {
+    // timide : yeux plissés "> <", grosses joues roses, petite bouche gênée
+    ctx.fillStyle = 'rgba(240,110,120,0.55)';
+    ctx.beginPath(); ctx.ellipse(cx - 22, cy + 6, 11, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 22, cy + 6, 11, 7, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx - 19, cy - 11); ctx.lineTo(cx - 10, cy - 6); ctx.lineTo(cx - 19, cy - 1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 19, cy - 11); ctx.lineTo(cx + 10, cy - 6); ctx.lineTo(cx + 19, cy - 1); ctx.stroke();
+    ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.moveTo(cx - 5, cy + 13); ctx.quadraticCurveTo(cx, cy + 9, cx + 5, cy + 13); ctx.stroke();
+  } else if (kind === 'puff') {
+    // retient son souffle : joues gonflées, yeux en coin qui guettent
+    ctx.fillStyle = 'rgba(232,120,100,0.6)';
+    ctx.beginPath(); ctx.ellipse(cx - 21, cy + 8, 12, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + 21, cy + 8, 12, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(cx - 13, cy - 7, 8, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx + 13, cy - 7, 8, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = NAVY;
+    ctx.beginPath(); ctx.arc(cx - 9, cy - 8, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 17, cy - 8, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 4, cy + 12); ctx.lineTo(cx + 4, cy + 12); ctx.stroke();
   } else if (kind === 'inhale') {
     // yeux plissés, narines dilatées, bouche qui aspire
     ctx.beginPath(); ctx.moveTo(cx - 19, cy - 9); ctx.lineTo(cx - 8, cy - 5); ctx.stroke();

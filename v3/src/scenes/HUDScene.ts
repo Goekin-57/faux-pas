@@ -9,6 +9,7 @@ import { PadReader, PAD } from '../core/Pad';
 import { Button, ButtonList } from '../ui/Button';
 import { Tutorial } from '../ui/Tutorial';
 import { levelMeta, nextLevel } from '../levels';
+import { TUNING } from '../core/Difficulty';
 
 /** Interface en jeu : discrète, jamais par-dessus les plateformes. */
 export class HUDScene extends Phaser.Scene {
@@ -31,18 +32,30 @@ export class HUDScene extends Phaser.Scene {
     this.overlay = null;
     this.list = null;
     this.paused = false;
-    const info = (this.registry.get('levelInfo') as { id: string; name: string }) ?? { id: '1-1', name: '' };
+    const info = (this.registry.get('levelInfo') as { id: string; name: string; difficulty?: 'easy' | 'expert' }) ?? { id: '1-1', name: '' };
+    const diff = info.difficulty ?? Save.difficulty;
 
     // --- pastille niveau (haut gauche)
     const chip = this.add.graphics();
     chip.fillStyle(0x16302f, 0.72);
     chip.fillRoundedRect(20, 18, 64, 40, 20);
     this.add.text(52, 38, info.id, { fontFamily: FONTS.display, fontSize: '22px', color: '#fff1c9' }).setOrigin(0.5);
-    this.nameText = this.add.text(96, 38, info.name, {
+    // pastille de difficulté (toujours visible : on sait dans quel mode on joue)
+    const dLabel = this.add.text(0, 0, TUNING[diff].label.toUpperCase(), {
+      fontFamily: FONTS.ui, fontSize: '14px', fontStyle: '600', color: diff === 'expert' ? '#fff1e6' : '#173640'
+    }).setOrigin(0.5).setLetterSpacing(1.2);
+    const dw = dLabel.width + 22;
+    const dchip = this.add.graphics();
+    dLabel.setDepth(1);
+    dchip.fillStyle(diff === 'expert' ? 0xc9541b : 0x7fd1c7, 0.92);
+    dchip.fillRoundedRect(92, 26, dw, 24, 12);
+    dLabel.setPosition(92 + dw / 2, 38);
+    const nameX = 92 + dw + 12;
+    this.nameText = this.add.text(nameX - 4, 38, info.name, {
       fontFamily: FONTS.ui, fontSize: '20px', fontStyle: '600', color: '#fff8e6'
     }).setOrigin(0, 0.5).setShadow(0, 2, 'rgba(10,30,30,0.45)', 6);
     this.nameText.setAlpha(0);
-    this.tweens.add({ targets: this.nameText, alpha: 1, x: 100, duration: 500, delay: 300 });
+    this.tweens.add({ targets: this.nameText, alpha: 1, x: nameX, duration: 500, delay: 300 });
     this.tweens.add({ targets: this.nameText, alpha: 0, duration: 800, delay: 4200 });
 
     // --- morts + temps (haut droite)
@@ -121,21 +134,49 @@ export class HUDScene extends Phaser.Scene {
     if (this.overlay) return;
     this.paused = true;
     this.padReader.swallow(); // le Start qui a mis en pause ne doit pas la refermer aussitôt
-    const { panel, add } = this.panel('Pause', 380);
+    const { panel, add } = this.panel('Pause', 440);
     const muted = Save.settings.muted;
+    const cur = Save.difficulty;
     const buttons = [
-      new Button(this, 0, -60, 'Reprendre', () => this.resume(), { primary: true }),
-      new Button(this, 0, 4, 'Recommencer le niveau', () => { this.close(); Bus.emit(EV.restart); }, { width: 280 }),
-      new Button(this, 0, 68, muted ? 'Son : coupé' : 'Son : activé', () => {
+      new Button(this, 0, -84, 'Reprendre', () => this.resume(), { primary: true }),
+      new Button(this, 0, -22, 'Recommencer le niveau', () => { this.close(); Bus.emit(EV.restart); }, { width: 280 }),
+      new Button(this, 0, 40, `Difficulté : ${TUNING[cur].label}`, () => this.confirmDifficulty(), { width: 280 }),
+      new Button(this, 0, 102, muted ? 'Son : coupé' : 'Son : activé', () => {
         const m = Audio.toggleMute();
-        buttons[2].setText(m ? 'Son : coupé' : 'Son : activé');
+        buttons[3].setText(m ? 'Son : coupé' : 'Son : activé');
       }, { width: 280 }),
-      new Button(this, 0, 132, 'Menu principal', () => { this.close(); Bus.emit(EV.quit); }, { width: 280 })
+      new Button(this, 0, 164, 'Menu principal', () => { this.close(); Bus.emit(EV.quit); }, { width: 280 })
     ];
     add(buttons);
     this.list = new ButtonList(this, buttons, () => this.resume());
     this.list.focusFirst();
     void panel;
+  }
+
+  /** Changer de difficulté en cours de partie : confirmation, puis le niveau recommence. */
+  private confirmDifficulty(): void {
+    const next = Save.difficulty === 'easy' ? 'expert' : 'easy';
+    this.close();
+    this.paused = true;
+    const { add } = this.panel('Difficulté', 400);
+    const T = TUNING[next];
+    const lines = next === 'expert'
+      ? 'Pièges plus rapides et plus malins.\nAucun point de contrôle.'
+      : 'Pièges lisibles, un point de contrôle.\nMorts illimitées.';
+    const body = this.add.text(0, -60, `Passer en ${T.label} ?\n${lines}\n\nLe niveau va recommencer.`, {
+      fontFamily: FONTS.ui, fontSize: '18px', color: '#e6f1ec', align: 'center', lineSpacing: 5
+    }).setOrigin(0.5);
+    const buttons = [
+      new Button(this, 0, 74, `Passer en ${T.label}`, () => {
+        Save.setDifficulty(next);
+        this.close();
+        Bus.emit(EV.restart);
+      }, { primary: true, width: 280 }),
+      new Button(this, 0, 136, 'Annuler', () => { this.close(); this.showPause(); }, { width: 280 })
+    ];
+    add([body, ...buttons]);
+    this.list = new ButtonList(this, buttons, () => { this.close(); this.showPause(); });
+    this.list.focusFirst();
   }
 
   private resume(): void {

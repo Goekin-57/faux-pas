@@ -3,6 +3,7 @@ import { DEPTH } from '../core/constants';
 import { ensureCanvas } from '../art/textures';
 import { paintFlowerHead, paintFlowerFace, PETALS } from '../menu/paintMenu';
 import type { Trap, TrapContext } from './Trap';
+import { tuning, TUNING } from '../core/Difficulty';
 
 /**
  * Fleur indiscrète — mécanique signature du niveau 1-2.
@@ -34,9 +35,31 @@ export interface FlowerDef {
   power?: number;   // multiplicateur de la poussée
   /** Hauteur de la zone soufflée (fleurs latérales), par défaut 300. */
   height?: number;
+  /**
+   * SOURNOISE : si on saute pour esquiver, elle retient son éternuement (joues gonflées)
+   * et attend qu'on retombe. Expert : elle retient plus longtemps et les sauts l'excitent.
+   */
+  sly?: boolean;
+  /**
+   * ASPIRANTE (piège inversé de la fleur) : au lieu d'éternuer, elle inspire longuement et attire
+   * tout ce qui est devant elle. Au sol on peut résister ; en l'air, elle porte loin.
+   */
+  suck?: boolean;
+  /** TIMIDE : se cache quand on la regarde ; ne se concentre que si on lui tourne le dos. */
+  shy?: boolean;
+  /** false : le souffle ne pousse pas le joueur (il ne gonfle qu'une voile ou une porte). */
+  pushPlayer?: boolean;
+  /** Champ de vision explicite (monde), à la place du champ par défaut. */
+  watch?: { x: number; y: number; w: number; h: number };
+  /** Bulle comique quand elle repousse le joueur (faux raccourci…). */
+  quip?: string;
+  /** Hauteur de la tête au-dessus du sol (par défaut selon la taille). */
+  headY?: number;
+  /** Timing indépendant de la difficulté (combos réglés au centième entre deux fleurs). */
+  steady?: boolean;
 }
 
-type State = 'idle' | 'inhale' | 'sneeze' | 'dazed';
+type State = 'idle' | 'inhale' | 'hold' | 'sneeze' | 'dazed';
 
 const SIZES: Record<FlowerSize, { headY: number; headScale: number; potW: number; potH: number; reach: number; power: number }> = {
   small: { headY: 96, headScale: 0.42, potW: 52, potH: 32, reach: 300, power: 0.62 },
@@ -44,8 +67,8 @@ const SIZES: Record<FlowerSize, { headY: number; headScale: number; potW: number
   giant: { headY: 132, headScale: 0.95, potW: 96, potH: 56, reach: 420, power: 1 }
 };
 
-const INHALE = 0.65;
 const SNEEZE = 0.4;
+const SUCK_TIME = 1.3;
 
 export class Sneezer implements Trap {
   readonly id: string;
@@ -78,6 +101,12 @@ export class Sneezer implements Trap {
   private readonly daze: number;
   private readonly power: number;
   private readonly baseScale: number;
+  private readonly INHALE: number;
+  private wasGrounded = true;
+  private hidden = false;
+  private quipped = false;
+  /** Appelé à chaque éternuement (radeau à voile, porte volante…). */
+  readonly onSneeze: Array<() => void> = [];
 
   constructor(private scene: Phaser.Scene, readonly cfg: FlowerDef, index: number) {
     this.id = `flower-${index}`;
@@ -86,16 +115,18 @@ export class Sneezer implements Trap {
     const S = SIZES[this.size];
     this.reach = cfg.reach ?? S.reach;
     this.view = cfg.view ?? this.reach + 80;
-    this.stare = cfg.stare ?? (this.size === 'small' ? 0.9 : 1.15);
+    const T = cfg.steady ? TUNING.easy : tuning();
+    this.stare = (cfg.stare ?? (this.size === 'small' ? 0.9 : 1.15)) * T.flowerStare;
+    this.INHALE = cfg.suck ? SUCK_TIME : T.flowerInhale;
     this.daze = cfg.daze ?? 2.6;
     this.power = (cfg.power ?? 1) * S.power;
     this.headX = cfg.x + (this.blow === 'right' ? 10 : this.blow === 'left' ? -10 : 0);
-    this.headY = cfg.groundY - S.headY;
+    this.headY = cfg.groundY - (cfg.headY ?? S.headY);
     this.baseScale = S.headScale;
 
     const pal = cfg.palette ?? 'peach';
     const headKey = ensureCanvas(scene, `fl-head-${pal}`, () => paintFlowerHead(PETALS[pal]));
-    (['calm', 'inhale', 'sneeze', 'watch', 'dazed'] as const).forEach((k) => ensureCanvas(scene, `mf-face-${k}`, () => paintFlowerFace(k)));
+    (['calm', 'inhale', 'sneeze', 'watch', 'dazed', 'shy', 'puff'] as const).forEach((k) => ensureCanvas(scene, `mf-face-${k}`, () => paintFlowerFace(k)));
 
     this.wind = scene.add.graphics().setDepth(DEPTH.fx - 1);
     this.stem = scene.add.graphics().setDepth(DEPTH.props);
@@ -110,7 +141,7 @@ export class Sneezer implements Trap {
 
     if (this.blow === 'up') {
       // la corolle d'une fleur géante tournée vers le ciel est un plateau (traversable par en dessous)
-      const w = 124;
+      const w = this.size === 'small' ? 56 : 124;
       this.headZone = scene.add.zone(this.headX, this.headY - 6, w, 14);
       scene.physics.add.existing(this.headZone, true);
       const b = this.headZone.body as Phaser.Physics.Arcade.StaticBody;
@@ -147,6 +178,8 @@ export class Sneezer implements Trap {
   /** Champ de vision (là où l'attention monte). */
   private viewRect(): Phaser.Geom.Rectangle {
     const g = this.cfg.groundY;
+    const w = this.cfg.watch;
+    if (w) return new Phaser.Geom.Rectangle(w.x, w.y, w.w, w.h);
     if (this.blow === 'up') return new Phaser.Geom.Rectangle(this.headX - 70, this.headY - 120, 140, 130);
     const h = 360;
     return this.blow === 'right'
@@ -162,7 +195,21 @@ export class Sneezer implements Trap {
     const p = ctx.player;
     const pb = p.body;
     const px = pb.x + pb.halfWidth, py = pb.y + pb.halfHeight;
-    const seen = p.alive && Phaser.Geom.Rectangle.Contains(this.viewRect(), px, py);
+    let seen = p.alive && Phaser.Geom.Rectangle.Contains(this.viewRect(), px, py);
+    // un saut dans son champ : elle le remarque (la sournoise Expert s'en excite)
+    const jumped = this.wasGrounded && !p.grounded && pb.velocity.y < -300;
+    this.wasGrounded = p.grounded;
+
+    // la timide ne se concentre que si on lui tourne le dos
+    let shyNow = false;
+    if (this.cfg.shy && seen) {
+      const facingHer = (px < this.headX ? 1 : -1) === p.facing;
+      if (facingHer) { seen = false; shyNow = true; }
+    }
+    if (this.cfg.shy && this.state === 'idle') {
+      if (shyNow && !this.hidden && this.attention > 0.05) ctx.sfx('shy', this.headX);
+      this.hidden = shyNow;
+    }
 
     switch (this.state) {
       case 'idle': {
@@ -170,8 +217,9 @@ export class Sneezer implements Trap {
           const d = Phaser.Math.Distance.Between(this.headX, this.headY, px, py);
           const near = Phaser.Math.Clamp(1.5 - d / Math.max(1, this.view), 0.5, 1.5);
           this.attention = Math.min(1, this.attention + (dt / this.stare) * near);
+          if (jumped && this.cfg.sly && tuning().id === 'expert') this.attention = Math.min(1, this.attention + 0.3);
         } else {
-          this.attention = Math.max(0, this.attention - dt * 0.9);
+          this.attention = Math.max(0, this.attention - dt * (shyNow ? 2.2 : 0.9));
         }
         // petits reniflements : l'indice sonore que la fleur "monte"
         const step = Math.floor(this.attention * 3);
@@ -181,25 +229,35 @@ export class Sneezer implements Trap {
         } else if (step < this.sniffs) this.sniffs = step;
         if (this.attention >= 1) {
           this.go('inhale');
-          ctx.sfx('sneezeIn', this.headX, 1);
+          ctx.sfx(this.cfg.suck ? 'suck' : 'sneezeIn', this.headX, 1);
         }
         break;
       }
       case 'inhale':
-        if (this.t >= INHALE) {
-          this.go('sneeze');
-          this.launched = false;
-          ctx.sfx('sneeze', this.headX, 1);
-          this.burstGust();
+        if (this.cfg.suck) this.pull(ctx);
+        if (this.t >= this.INHALE) {
+          // la sournoise ne gaspille pas son éternuement sur un joueur en l'air
+          if (this.cfg.sly && p.alive && !p.grounded && (seen || this.inGust(pb))) {
+            this.go('hold');
+            break;
+          }
+          this.release(ctx);
         }
+        break;
+      case 'hold':
+        if ((p.grounded && this.t > 0.05) || !p.alive || this.t >= tuning().slyHold) this.release(ctx);
         break;
       case 'sneeze':
         // le souffle agit pendant ses premiers instants : on peut s'y jeter au dernier moment
-        if (!this.launched && this.t < 0.16 && p.alive && this.inGust(pb)) {
+        if (!this.launched && this.t < 0.16 && p.alive && this.inGust(pb) && this.cfg.pushPlayer !== false && !this.cfg.suck) {
           this.launched = true;
           this.push(ctx);
         }
         if (this.t >= SNEEZE) {
+          // ratée : vexée (sauf l'aspirante, qui a fini de boire son air)
+          if (!this.launched && !this.cfg.suck && this.cfg.pushPlayer !== false && p.alive && seen) {
+            ctx.sfx('grumble', this.headX);
+          }
           this.go('dazed');
           ctx.sfx('dazed', this.headX, 0.6);
         }
@@ -209,6 +267,7 @@ export class Sneezer implements Trap {
         if (this.t >= this.daze) {
           this.go('idle');
           this.sniffs = 0;
+          this.quipped = false;
         }
         break;
     }
@@ -220,6 +279,28 @@ export class Sneezer implements Trap {
     this.look.x += ((seen ? tx : 0) - this.look.x) * k;
     this.look.y += ((seen ? ty : 0) - this.look.y) * k;
     this.render();
+  }
+
+  private release(ctx: TrapContext): void {
+    this.go('sneeze');
+    this.launched = false;
+    if (this.cfg.suck) {
+      ctx.sfx('bubble', this.headX); // "glup"
+    } else {
+      ctx.sfx('sneeze', this.headX, 1);
+      this.burstGust();
+    }
+    for (const f of this.onSneeze) f();
+  }
+
+  /** Aspiration : courant d'air vers la fleur, plus fort en l'air (on peut toujours lutter au sol). */
+  private pull(ctx: TrapContext): void {
+    const p = ctx.player;
+    if (!p.alive || !this.inGust(p.body)) return;
+    const dir = this.blow === 'left' ? 1 : -1; // tournée vers la gauche → attire vers la droite
+    const k = Math.min(1, this.t / 0.25);
+    p.windX = dir * k * (p.grounded ? tuning().suckGround : 560);
+    if (Math.random() < 0.25) ctx.burst('leaves', p.x - dir * 30, p.y - 10, 1);
   }
 
   private inGust(pb: Phaser.Physics.Arcade.Body): boolean {
@@ -240,6 +321,26 @@ export class Sneezer implements Trap {
       p.launch(dir * 880 * pw * near, -380 * pw, 0.42);
     }
     ctx.burst('leaves', p.x, p.y, 6);
+    if (this.cfg.quip && !this.quipped) {
+      this.quipped = true;
+      ctx.sfx('giggle', this.headX);
+      this.say(this.cfg.quip);
+    }
+  }
+
+  private say(text: string): void {
+    const sc = this.scene;
+    const label = sc.add.text(0, 0, text, { fontFamily: '"Fredoka", system-ui, sans-serif', fontSize: '19px', color: '#24306a', fontStyle: '600' }).setOrigin(0.5);
+    const w = label.width + 26, h = label.height + 12;
+    const g = sc.add.graphics();
+    g.fillStyle(0xfffaf0, 1);
+    g.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
+    g.fillTriangle(-6, h / 2 - 1, 8, h / 2 - 1, 2, h / 2 + 9);
+    const W = sc.physics.world.bounds.width;
+    const bx = Phaser.Math.Clamp(this.headX, w / 2 + 12, W - w / 2 - 12);
+    const c = sc.add.container(bx, this.headY - 70, [g, label]).setDepth(DEPTH.fx).setScale(0);
+    sc.tweens.add({ targets: c, scale: 1, duration: 200, ease: 'Back.easeOut' });
+    sc.tweens.add({ targets: c, alpha: 0, y: c.y - 14, delay: 1700, duration: 300, onComplete: () => c.destroy() });
   }
 
   private go(s: State): void {
@@ -266,13 +367,28 @@ export class Sneezer implements Trap {
     let sc = 1 - this.attention * 0.1; // les pétales se resserrent quand elle se concentre
     let faceKey = this.attention > 0.08 ? 'mf-face-watch' : 'mf-face-calm';
     const s = this.state;
-    if (s === 'inhale') {
-      const k = Phaser.Math.Easing.Sine.InOut(Math.min(1, this.t / INHALE));
+    if (s === 'inhale' && this.cfg.suck) {
+      // aspire : la tête se penche EN AVANT, bouche ouverte
+      const k = Math.min(1, this.t / 0.3);
+      dx = sideDir * 10 * k + Math.sin(this.time * 30) * 1.5;
+      ang = sideDir * 14 * k;
+      sc = 1.04 + Math.sin(this.time * 9) * 0.03;
+      faceKey = 'mf-face-inhale';
+    } else if (s === 'inhale' || s === 'hold') {
+      const k = s === 'hold' ? 1 : Phaser.Math.Easing.Sine.InOut(Math.min(1, this.t / this.INHALE));
       dx = -sideDir * 14 * k * (up ? 0 : 1);
       dy = up ? 10 * k : -8 * k;
       ang = up ? 0 : -sideDir * 20 * k;
       sc = 0.9 + 0.14 * k;
       faceKey = 'mf-face-inhale';
+      if (s === 'hold') {
+        // retient son souffle en guettant le joueur : joues gonflées, petite vibration
+        sc = 1.06 + Math.sin(this.time * 26) * 0.025;
+        faceKey = 'mf-face-puff';
+      }
+    } else if (s === 'sneeze' && this.cfg.suck) {
+      sc = 1 - Math.min(1, this.t / 0.1) * 0.06;
+      faceKey = 'mf-face-calm';
     } else if (s === 'sneeze') {
       const k = Math.min(1, this.t / 0.1);
       dx = up ? 0 : sideDir * 22 * k;
@@ -284,6 +400,12 @@ export class Sneezer implements Trap {
       ang = Math.sin(this.time * 3) * 8;
       dy = 6;
       faceKey = 'mf-face-dazed';
+    }
+    if (s === 'idle' && this.hidden) {
+      // timide : se détourne en rougissant
+      faceKey = 'mf-face-shy';
+      ang = -sideDir * 18;
+      dx = -sideDir * 6;
     }
     const sway = s === 'idle' ? Math.sin(this.time * 1.4 + this.cfg.x) * 2 : 0;
     const hx = this.headX + dx + sway;
@@ -388,6 +510,20 @@ export class Sneezer implements Trap {
   private drawWind(): void {
     const g = this.wind;
     g.clear();
+    if (this.cfg.suck) {
+      if (this.state !== 'inhale') return;
+      // traits d'air qui convergent vers la bouche
+      const r = this.gustRect();
+      const dir = this.blow === 'left' ? -1 : 1;
+      g.lineStyle(3, 0xffffff, 0.45);
+      for (let i = 0; i < 5; i++) {
+        const ph = ((this.time * 1.6 + i * 0.2) % 1);
+        const x0 = this.headX + dir * (r.width * (1 - ph));
+        const y = this.headY - 40 + i * 24 + (this.headY - (this.headY - 40 + i * 24)) * ph * 0.6;
+        g.lineBetween(x0, y, x0 - dir * (50 - ph * 30), y);
+      }
+      return;
+    }
     if (this.state !== 'sneeze') return;
     const k = this.t / SNEEZE;
     const a = 0.55 * (1 - k);
@@ -413,6 +549,8 @@ export class Sneezer implements Trap {
     this.attention = 0;
     this.sniffs = 0;
     this.launched = false;
+    this.hidden = false;
+    this.quipped = false;
   }
 
   destroy(): void {

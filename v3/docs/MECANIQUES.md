@@ -81,16 +81,50 @@ Un bon piège de NOT SO FAST! se comprend **après** l'échec, jamais grâce à 
 Progression de l'intelligence : ch.1 réagit à un comportement simple → ch.2 exploite une habitude → ch.3 trompe la perception →
 ch.4 combine plusieurs systèmes → ch.5 observe le joueur et tente de prédire ses décisions.
 
-## 1-2 « Les fleurs indiscrètes » — détail des situations
+## Difficultés (v0.5)
+
+| | Facile | Expert |
+|---|---|---|
+| Points de contrôle | 1 au maximum par niveau | aucun (retour au début du niveau) |
+| Pavés polis | 0,45 s d'hésitation + 0,7 s d'avertissement | 0,32 s + 0,5 s |
+| Pavé farceur | s'enfonce si on hésite | s'enfonce dès qu'on atterrit |
+| Dionées rythmiques | repos 1,5 s, réveil 0,65 s | repos 1,2 s, réveil 0,5 s ; **frappent plus tôt si on attend juste à côté** (hésitation) |
+| Dionée maladroite | vise le bouton | **suit le joueur et anticipe sa course**, verrouille sa cible 0,3 s avant (petit « tic ») |
+| Fleurs | observation ×1, inspiration 0,65 s | observation ×0,8, inspiration 0,5 s (sauf le combo du 1-2, réglé au centième) |
+| Fleur sournoise | retient son éternuement 0,25 s max si on saute | 1 s ; **un saut dans son champ l'excite** |
+| Fleur aspirante | aspiration au sol 150 px/s | 210 px/s (toujours < vitesse de course : on peut résister) |
+| Porte esquiveuse | esquive au-delà de 210 px/s, abandonne après 3 esquives | 170 px/s, **esquive aussi les sauts**, n'abandonne jamais |
+| Porte volante | plateforme fixe | plateforme qui se balance |
+| Indices contextuels | après le délai prévu | délai ×1,6 (plus discrets, toujours présents) |
+| Combinaison en plus | — | 1-1 : une Dionée au-dessus du chemin trop poli |
+
+Sauvegarde : records (temps, morts) séparés par difficulté ; les déblocages sont communs.
+Une ancienne sauvegarde passe en Facile sans écran imposé ; un nouveau joueur choisit au premier lancement.
+Changer de difficulté en cours de niveau demande confirmation et recommence le niveau.
+
+## 1-1 « Le chemin trop poli » — les cinq moments (v0.5)
+
+| Moment | Situation | Ce que le joueur apprend |
+|---|---|---|
+| Accroche (≈ 5 s) | Le **pavé farceur** : il s'enfonce si on hésite, puis catapulte si on saute. Fossé sans danger | Le sol réagit à ce qu'on fait — et c'est drôle, pas punitif |
+| Découverte | Chemin de pavés polis, puis Dionée : le pavé MAT est la bonne place pour attendre | Poli = ne pas s'arrêter ; mat = fiable |
+| Combinaison | Escalier de pavés polis sous une Dionée, puis la **Dionée maladroite** : elle vise le joueur près d'un bouton… s'il s'écarte, elle tape le bouton et ouvre la grille | Le danger peut devenir l'outil |
+| Passage dynamique | Ascenseur à sablier (hésiter EXPRÈS), tunnel, final rythmé | Retourner la règle apprise |
+| Final humoristique | La **porte esquiveuse** : elle fuit si on fonce, revient si on s'arrête. Qui la poursuit jusqu'au coin est renvoyé devant elle par une petite fleur (teaser du 1-2) | « Pas si vite ! » |
+
+## 1-2 « Les fleurs indiscrètes » — détail des situations (v0.5)
 
 | Section | Situation | Ce que le joueur apprend |
 |---|---|---|
 | Découverte | Une fleur tournée vers lui le repousse (sans danger), puis reste sonnée | Le souffle repousse ; la fleur sonnée ne voit rien |
-| Catapulte | Fossé trop large ; une fleur est tournée vers le vide | Se placer DANS le souffle pour être projeté |
+| Catapulte | Fossé trop large ; la fleur projette… sur des **pavés polis** au-dessus des ronces | Se placer dans le souffle ; continuer à courir à l'atterrissage (leçon du 1-1) |
 | Trampoline | Fleur géante tournée vers le ciel ; sa corolle est un plateau | Le souffle vers le haut = super-saut |
-| Duel | La fleur lilas, en face, voit de très loin mais lentement | L'appâter d'abord (de loin), traverser pendant qu'elle est sonnée |
-| Final | La fleur du sol pousse dans le mur ; la géante à côté | Combiner : monter d'abord, se laisser porter en l'air |
-| Portier | Petite fleur devant la porte | Ne pas traîner (l'inverse du 1-1, où il fallait ralentir) |
+| Faux raccourci | Un tronc creux « RACCOURCI » ; au fond, une petite fleur renvoie le curieux dehors | On passe par-dessus (détour humoristique, jamais mortel) |
+| Duel | La fleur lilas est **sournoise** : si on saute avant qu'elle ait éternué, elle retient son souffle et attend l'atterrissage | L'appâter d'abord, de loin |
+| Piège inversé | La **fleur aspirante** inspire au lieu d'éternuer : au bord du vide elle attire (résister), en plein saut elle porte de l'autre côté | Le même danger est utile ou mortel selon le moment |
+| Chaîne | La **fleur timide** se cache quand on la regarde ; dos tourné, elle éternue dans la voile d'un **radeau** qui traverse les ronces | Une réaction en déclenche une autre |
+| Combo | La fleur du sol pousse dans le mur ; la géante à côté | Monter d'abord, se laisser porter en l'air |
+| Porte volante | Une petite fleur éternue la porte sur une plateforme en hauteur ; une dernière géante y emmène le héros | Surprise finale, résolue avec ce qu'on a appris |
 
-Un seul point de contrôle par niveau, et seulement s'il évite de refaire une longue partie déjà maîtrisée
-(1-1 : au milieu, avant la haie ; 1-2 : en haut de la corniche, avant le duel).
+Un seul point de contrôle par niveau en Facile, et seulement s'il évite de refaire une longue partie déjà maîtrisée
+(1-1 : au milieu, avant la haie ; 1-2 : en haut de la corniche, avant le duel). Aucun en Expert.

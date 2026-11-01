@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { LOOK2 } from '../core/Look';
 import { PHYSICS, HERO, DEPTH } from '../core/constants';
 import type { Controls } from '../core/Controls';
 
@@ -41,8 +42,15 @@ export class Player {
   visualScale = 1;
   /** Vitesse de marche relative (écran d'accueil : flânerie). Jamais modifiée en jeu. */
   speedScale = 1;
+  private halo?: Phaser.GameObjects.Image;
   /** Temps restant d'une propulsion extérieure (bourrasque). */
   private launchT = 0;
+  /**
+   * Courant d'air extérieur (px/s), posé à chaque frame par un piège (fleur aspirante).
+   * Il s'ajoute à la vitesse visée : on dérive si on ne fait rien, on peut toujours lutter.
+   */
+  windX = 0;
+  private nearMissAt = -10;
 
   private lastGroundedAt = -1000;
   private jumpBufferedAt = -1000;
@@ -69,7 +77,11 @@ export class Player {
     this.body.setMaxVelocityY(PHYSICS.maxFall);
     this.body.setCollideWorldBounds(true);
 
-    this.shadow = scene.add.ellipse(x, y, 40, 9, 0x1e2a24, 0.22).setDepth(DEPTH.player - 1);
+    this.shadow = scene.add.ellipse(x, y, 40, 9, 0x1e2a24, LOOK2 ? 0.34 : 0.22).setDepth(DEPTH.player - 1);
+    // [maquette v2] halo doux derrière le héros : il se détache toujours du décor
+    if (LOOK2 && scene.textures.exists('dot-warm')) {
+      this.halo = scene.add.image(x, y, 'dot-warm').setScale(2.6).setAlpha(0.28).setBlendMode(Phaser.BlendModes.ADD).setDepth(DEPTH.player - 2);
+    }
     this.scarfGfx = scene.add.graphics().setDepth(DEPTH.player - 0.5);
 
     const s = 0.5;
@@ -150,7 +162,8 @@ export class Player {
       // ---- horizontal
       const dir = (c.right ? 1 : 0) - (c.left ? 1 : 0);
       const vx = b.velocity.x;
-      let target = dir * PHYSICS.runSpeed * this.speedScale;
+      const wind = this.windX;
+      let target = dir * PHYSICS.runSpeed * this.speedScale + wind;
       let accel: number;
       if (this.launchT > 0) this.launchT -= dt;
       const launched = this.launchT > 0;
@@ -160,8 +173,9 @@ export class Player {
         if (launched) accel *= 0.35; // propulsé : on garde un peu de contrôle, pas tout
         this.facing = dir as 1 | -1;
       } else {
-        target = 0;
+        target = wind;
         accel = this.grounded ? PHYSICS.groundDecel : PHYSICS.airDecel;
+        if (wind !== 0) accel = this.grounded ? PHYSICS.groundAccel * 0.5 : PHYSICS.airAccel;
         if (launched) accel = 0;
       }
       // en l'air, une poussée extérieure (bourrasque) n'est pas freinée si on va dans son sens
@@ -199,6 +213,7 @@ export class Player {
     if (this.grounded && Math.abs(b.velocity.x) < 40) this.stillTime += dt;
     else this.stillTime = 0;
 
+    this.windX = 0; // consommé : le piège le reposera s'il souffle encore
     this.animate(dt);
   }
 
@@ -300,6 +315,7 @@ export class Player {
 
     // ombre au sol
     this.shadow.setPosition(bx, by + PHYSICS.bodyH / 2 + 1);
+    this.halo?.setPosition(bx, by - 4).setVisible(this.rig.visible);
     this.shadow.setVisible(this.grounded && this.rig.visible);
     this.shadow.setScale((1 - Math.abs(this.squash) * 0.01) * vs, vs);
 
@@ -471,6 +487,30 @@ export class Player {
     }
   }
 
+  /**
+   * Frôlé par un piège : goutte de sueur, mine inquiète puis soulagée.
+   * Retourne false si la réaction est encore en cours (évite le spam).
+   */
+  nearMiss(): boolean {
+    if (!this.alive || this.time - this.nearMissAt < 1.6) return false;
+    this.nearMissAt = this.time;
+    this.setExpression('worried', 450);
+    this.scene.time.delayedCall(450, () => { if (this.alive) this.setExpression('grin', 600); });
+    const drop = this.scene.add.graphics();
+    drop.fillStyle(0xbfe8ff, 1);
+    drop.fillCircle(0, 0, 4);
+    drop.fillTriangle(-4, -1, 4, -1, 0, -9);
+    drop.fillStyle(0xffffff, 0.9);
+    drop.fillCircle(-1.2, -1, 1.3);
+    drop.setPosition(17, -30);
+    this.rig.add(drop);
+    this.scene.tweens.add({
+      targets: drop, x: 24, y: -6, alpha: { from: 1, to: 0 }, duration: 700, ease: 'Quad.easeIn',
+      onComplete: () => drop.destroy()
+    });
+    return true;
+  }
+
   /** Yeux rieurs pendant un moment. */
   happyEyes(ms: number): void {
     if (!this.alive) return;
@@ -500,6 +540,7 @@ export class Player {
     this.rig.destroy();
     this.scarfGfx.destroy();
     this.shadow.destroy();
+    this.halo?.destroy();
     this.zone.destroy();
   }
 }

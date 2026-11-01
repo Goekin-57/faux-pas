@@ -36,6 +36,7 @@ Les manettes (disposition standard : Xbox, PlayStation, Switch Pro, génériques
 - Architecture complète pour 5 chapitres × 8 niveaux (registre des 40 niveaux, sélection, sauvegarde).
 - Direction artistique du chapitre 1 « La Serre des Évidences ».
 - **Niveaux 1-1 « Le chemin trop poli » et 1-2 « Les fleurs indiscrètes » entièrement jouables.**
+- **Deux difficultés (v0.5)** : Facile (pièges lisibles, 1 point de contrôle) et Expert (pièges plus rapides qui anticipent sauts et hésitations, aucun point de contrôle). Choix au premier lancement, modifiable dans les Options ou en pause ; records séparés. Détails : `docs/MECANIQUES.md`.
 - Tutoriel des commandes au premier niveau joué (clavier, manette ou tactile, détecté automatiquement).
 - Indices contextuels discrets si le joueur reste bloqué.
 - Rendu haute résolution : le canevas suit l'écran (Full HD, 1440p, 4K) et les illustrations sont repeintes à cette résolution (`src/core/Display.ts`).
@@ -55,6 +56,7 @@ src/
     Bus.ts                événements jeu ↔ interface
     Pad.ts                manette (API Gamepad du navigateur, lecture à fronts)
     CameraRig.ts          caméra stable : amortie, calée sur le sol, sans secousse
+    Difficulty.ts         réglages Facile / Expert (comportements des pièges)
   art/
     svg.ts                illustrations SVG (héros, accessoires, porte, plante…)
     paint.ts              peintres Canvas (terrains, décors, pavés, ronces)
@@ -64,14 +66,19 @@ src/
   traps/
     Trap.ts               contrat commun : machine à états, reset, gag de mort
     ShyStone.ts           pavé qui réagit à l'hésitation (+ variante ascenseur à sablier)
-    Sneezer.ts            fleur indiscrète : observe, inspire, éternue (souffle directionnel)
-    Snapper.ts            Dionée suspendue (danger rythmique annoncé)
+    PrankStone.ts         pavé farceur à ressort (accroche du 1-1)
+    Sneezer.ts            fleur indiscrète : observe, inspire, éternue (+ sournoise, aspirante, timide)
+    Snapper.ts            Dionée suspendue (rythmique, ou « maladroite » : bouton + grille)
+    Raft.ts               radeau à voile poussé par un éternuement (piège en chaîne)
+    LeafPlatform.ts       plateforme-feuille suspendue (mobile en Expert)
+    HollowLog.ts          tronc creux du faux raccourci
     Checkpoint.ts         bourgeon qui éclot
-    ExitDoor.ts           porte de sortie (gag « Pas si vite ! »)
+    ExitDoor.ts           porte de sortie (esquiveuse au 1-1, volante au 1-2)
   levels/
     types.ts              format de données d'un niveau
     index.ts              registre des 40 niveaux et des 5 chapitres
     chapter1/level1_1.ts  niveau 1-1, composé à la main
+    chapter1/level1_2.ts  niveau 1-2
   menu/                   écran d'accueil : décor en parallaxe, logo peint, menu, scène interactive
   scenes/                 Boot, Menu, Game, HUD
   ui/Button.ts            boutons + navigation clavier

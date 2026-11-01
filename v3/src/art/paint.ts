@@ -2,6 +2,7 @@
 // Tout est généré à partir de graines fixes : le rendu est identique à chaque partie.
 
 import { DISPLAY, type HiDpiCanvas } from '../core/Display';
+import { LOOK2 } from '../core/Look';
 
 export function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -379,6 +380,60 @@ export function paintStar(): HTMLCanvasElement {
 export const GRASS_PAD = 22;
 
 /** Plate-bande illustrée : terre en strates + chapeau de mousse. */
+/**
+ * [maquette v2] Sol « en coupe » : la terre s'assombrit vite avec la profondeur (le regard reste
+ * sur la surface où l'on joue), grosses pierres enchâssées avec reflets, radicelles, liseré clair sur les bords.
+ */
+function paintSoilCutaway(ctx: CanvasRenderingContext2D, ox: number, pad: number, w: number, h: number, r: () => number): void {
+  // pierres enchâssées (peu nombreuses, plus grosses, avec volume)
+  for (let i = 0; i < Math.max(1, (w * Math.min(h, 300)) / 26000); i++) {
+    const x = ox + 20 + r() * (w - 40), y = pad + 70 + r() * Math.min(h - 90, 200);
+    const rx = 10 + r() * 16, ry = rx * (0.55 + r() * 0.2);
+    const sg = ctx.createLinearGradient(0, y - ry, 0, y + ry);
+    sg.addColorStop(0, '#cdbba6'); sg.addColorStop(1, '#8a7563');
+    ctx.fillStyle = 'rgba(30,14,10,0.35)';
+    ctx.beginPath(); ctx.ellipse(x + 2, y + 3, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, (r() - 0.5) * 0.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,250,235,0.45)';
+    ctx.beginPath(); ctx.ellipse(x - rx * 0.3, y - ry * 0.4, rx * 0.4, ry * 0.22, -0.3, 0, Math.PI * 2); ctx.fill();
+  }
+  // radicelles fines qui pendent de la mousse
+  ctx.lineCap = 'round';
+  for (let i = 0; i < w / 26; i++) {
+    const x = ox + r() * w, len = 18 + r() * 46;
+    ctx.strokeStyle = `rgba(236,214,180,${0.25 + r() * 0.25})`;
+    ctx.lineWidth = 1 + r();
+    ctx.beginPath();
+    ctx.moveTo(x, pad + 16);
+    ctx.quadraticCurveTo(x + (r() - 0.5) * 16, pad + 16 + len * 0.6, x + (r() - 0.5) * 10, pad + 16 + len);
+    ctx.stroke();
+  }
+  // profondeur : la terre plonge dans l'ombre (la coupe n'attire plus le regard)
+  const deep = ctx.createLinearGradient(0, pad + 60, 0, pad + 280);
+  deep.addColorStop(0, 'rgba(34,18,22,0)');
+  deep.addColorStop(0.55, 'rgba(34,18,22,0.55)');
+  deep.addColorStop(1, 'rgba(26,14,20,0.86)');
+  ctx.fillStyle = deep;
+  ctx.fillRect(ox, pad + 60, w, h);
+  // liseré de lumière sur les bords de la coupe (volume)
+  const edge = (x0: number, dir: number) => {
+    const eg = ctx.createLinearGradient(x0, 0, x0 + dir * 18, 0);
+    eg.addColorStop(0, 'rgba(255,214,170,0.35)');
+    eg.addColorStop(1, 'rgba(255,214,170,0)');
+    ctx.fillStyle = eg;
+    // fondu vertical : le liseré s'éteint progressivement avec la profondeur (pas de bord net)
+    const steps = 24, len = Math.min(h, 200);
+    for (let i = 0; i < steps; i++) {
+      ctx.globalAlpha = 1 - i / steps;
+      ctx.fillRect(Math.min(x0, x0 + dir * 18), pad + 10 + (i * len) / steps, 18, len / steps + 0.5);
+    }
+    ctx.globalAlpha = 1;
+  };
+  edge(ox, 1);
+  edge(ox + w, -1);
+}
+
 export function paintBed(w: number, h: number, seed: number, opts: { flowers?: boolean } = {}): HTMLCanvasElement {
   const pad = GRASS_PAD;
   const [c, ctx] = canvas(w + 16, h + pad);
@@ -420,6 +475,7 @@ export function paintBed(w: number, h: number, seed: number, opts: { flowers?: b
     ctx.bezierCurveTo(x + 10, pad + 50, x - 14, pad + 70, x + 6, pad + 100 + r() * 50);
     ctx.stroke();
   }
+  if (LOOK2) paintSoilCutaway(ctx, ox, pad, w, h, r);
   // ombre portée sous la mousse
   const sh = ctx.createLinearGradient(0, pad + 10, 0, pad + 44);
   sh.addColorStop(0, 'rgba(40,20,14,0.45)');
@@ -774,5 +830,82 @@ export function paintShaft(w: number, h: number): HTMLCanvasElement {
   ctx.moveTo(w - 10, 0);
   ctx.lineTo(w - 10, h);
   ctx.stroke();
+  return c;
+}
+
+// ------------------------------------------------------- [maquette v2] AMBIANCE
+
+/** Intérieur de serre : étagères de rempotage, pots alignés, paniers suspendus (plan intermédiaire). */
+export function paintGreenhouseInterior(w: number, h: number, seed: number): HTMLCanvasElement {
+  const [c, ctx] = canvas(w, h);
+  const r = rng(seed);
+  const haze = 0xcfe8dc;
+  const col = (n: number, k = 0.55) => hex(mix(n, haze, k));
+  for (let x = 40; x < w; x += 520 + r() * 260) {
+    const sw = 220 + r() * 140;
+    const shelves = [h - 180, h - 300];
+    // montants
+    ctx.fillStyle = col(0x8a6a52);
+    ctx.fillRect(x, h - 330, 8, 330);
+    ctx.fillRect(x + sw - 8, h - 330, 8, 330);
+    for (const sy of shelves) {
+      ctx.fillStyle = col(0x9c7a5e);
+      ctx.fillRect(x - 6, sy, sw + 12, 9);
+      // pots sur l'étagère
+      for (let px = x + 14; px < x + sw - 20; px += 30 + r() * 14) {
+        const ph = 18 + r() * 10, pw = 20 + r() * 8;
+        ctx.fillStyle = col(r() > 0.3 ? 0xc87a5c : 0x7fb7c4);
+        ctx.beginPath();
+        ctx.moveTo(px, sy - ph); ctx.lineTo(px + pw, sy - ph); ctx.lineTo(px + pw * 0.85, sy); ctx.lineTo(px + pw * 0.15, sy);
+        ctx.fill();
+        // pousse
+        ctx.fillStyle = col(0x5e9a70, 0.45);
+        for (let k = 0; k < 3; k++) {
+          ctx.beginPath();
+          ctx.ellipse(px + pw / 2 + (k - 1) * 5, sy - ph - 6 - r() * 8, 4, 9, (k - 1) * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+  // paniers suspendus
+  for (let x = 260; x < w; x += 600 + r() * 300) {
+    const y = 120 + r() * 80;
+    ctx.strokeStyle = col(0xffffff, 0.3);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x - 18, y); ctx.moveTo(x, 0); ctx.lineTo(x + 18, y); ctx.stroke();
+    ctx.fillStyle = col(0xb98a5a);
+    ctx.beginPath(); ctx.ellipse(x, y + 6, 26, 12, 0, 0, Math.PI); ctx.fill();
+    ctx.fillStyle = col(0x5e9a70, 0.45);
+    for (let k = 0; k < 9; k++) {
+      ctx.beginPath();
+      ctx.ellipse(x - 24 + k * 6, y + 10 + r() * 40, 4, 10 + r() * 16, (r() - 0.5) * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  return c;
+}
+
+/** Bande de brume douce (profondeur atmosphérique). */
+export function paintHaze(w: number, h: number): HTMLCanvasElement {
+  const [c, ctx] = canvas(w, h);
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(232,246,238,0)');
+  g.addColorStop(0.55, 'rgba(232,246,238,0.42)');
+  g.addColorStop(1, 'rgba(232,246,238,0.12)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  return c;
+}
+
+/** Halo de soleil (lumière chaude qui "baigne" l'image, en mode écran). */
+export function paintSunBloom(w: number, h: number): HTMLCanvasElement {
+  const [c, ctx] = canvas(w, h, 0.5);
+  const g = ctx.createRadialGradient(w * 0.82, h * 0.05, 10, w * 0.82, h * 0.05, w * 0.7);
+  g.addColorStop(0, 'rgba(255,236,190,0.55)');
+  g.addColorStop(0.35, 'rgba(255,226,170,0.22)');
+  g.addColorStop(1, 'rgba(255,226,170,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
   return c;
 }

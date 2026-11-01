@@ -23,7 +23,8 @@ export class HintSystem {
       const b = p.body;
       const cx = b.x + b.halfWidth;
       const done = (h.solvedBelowY !== undefined && b.bottom > h.solvedBelowY) ||
-        (h.solvedRightOf !== undefined && cx > h.solvedRightOf);
+        (h.solvedRightOf !== undefined && cx > h.solvedRightOf) ||
+        (h.solvedAboveY !== undefined && b.bottom < h.solvedAboveY);
       if (done) {
         this.solved.add(h.id);
         this.hide(h.id);

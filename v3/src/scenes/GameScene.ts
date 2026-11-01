@@ -13,6 +13,11 @@ import { Snapper } from '../traps/Snapper';
 import { Sneezer } from '../traps/Sneezer';
 import { Checkpoint } from '../traps/Checkpoint';
 import { ExitDoor } from '../traps/ExitDoor';
+import { PrankStone } from '../traps/PrankStone';
+import { Raft } from '../traps/Raft';
+import { LeafPlatform } from '../traps/LeafPlatform';
+import { HollowLog } from '../traps/HollowLog';
+import { tuning } from '../core/Difficulty';
 import type { DeathKind, Trap, TrapContext } from '../traps/Trap';
 import { overlaps } from '../traps/Trap';
 import type { LevelData } from '../levels/types';
@@ -28,6 +33,10 @@ export class GameScene extends Phaser.Scene {
   private player!: Player;
   private controls!: Controls;
   private stones: ShyStone[] = [];
+  private pranks: PrankStone[] = [];
+  private rafts: Raft[] = [];
+  private platforms: LeafPlatform[] = [];
+  private logs: HollowLog[] = [];
   private snappers: Snapper[] = [];
   private flowers: Sneezer[] = [];
   private traps: Trap[] = [];
@@ -54,6 +63,10 @@ export class GameScene extends Phaser.Scene {
     const meta = levelMeta(data.levelId ?? '1-1');
     this.level = (meta?.data ?? levelMeta('1-1')!.data!)();
     this.stones = [];
+    this.pranks = [];
+    this.rafts = [];
+    this.platforms = [];
+    this.logs = [];
     this.snappers = [];
     this.flowers = [];
     this.traps = [];
@@ -92,32 +105,70 @@ export class GameScene extends Phaser.Scene {
       burst: (kind, x, y, count = 8) => this.emitters[kind].explode(count, x, y)
     };
 
-    L.stones.forEach((s, i) => {
+    const T = tuning();
+    const keep = (o: { only?: string }) => !o.only || o.only === T.id;
+
+    L.stones.filter(keep).forEach((s, i) => {
+      if (s.kind === 'prank') {
+        const pr = new PrankStone(this, s, i);
+        this.pranks.push(pr);
+        this.traps.push(pr);
+        return;
+      }
       if (s.kind === 'matte') {
         const ph = Math.max(10, s.base - (s.top + STONE_H) + 10);
         ensureCanvas(this, `pillar-${Math.round(ph)}`, () => paintPillar(ph, i));
       }
-      const st = new ShyStone(this, s, i);
+      const st = new ShyStone(this, s as typeof s & { kind: 'matte' | 'polished' }, i);
       this.stones.push(st);
       this.traps.push(st);
     });
-    L.snappers.forEach((s, i) => {
+    L.snappers.filter(keep).forEach((s, i) => {
       const sn = new Snapper(this, s, i);
       this.snappers.push(sn);
       this.traps.push(sn);
     });
-    (L.flowers ?? []).forEach((f, i) => {
+    const tagged: Record<string, Sneezer> = {};
+    (L.flowers ?? []).filter(keep).forEach((f, i) => {
       const fl = new Sneezer(this, f, i);
       this.flowers.push(fl);
       this.traps.push(fl);
+      if (f.tag) tagged[f.tag] = fl;
     });
-    L.checkpoints.forEach((c) => this.checkpoints.push(new Checkpoint(this, c.x, c.groundY)));
-    this.door = new ExitDoor(this, L.exit.x, L.exit.groundY, L.exit.scootTo, () => this.win(), L.exit.gag ?? 'scoot');
+    (L.platforms ?? []).filter(keep).forEach((pd, i) => {
+      const move = pd.move && (!pd.moveOnly || pd.moveOnly === T.id) ? pd.move : undefined;
+      const pl = new LeafPlatform(this, { ...pd, move }, i);
+      this.platforms.push(pl);
+      this.traps.push(pl);
+    });
+    (L.rafts ?? []).forEach((rd, i) => {
+      const r = new Raft(this, rd, i);
+      this.rafts.push(r);
+      this.traps.push(r);
+      tagged[rd.flower]?.onSneeze.push(() => r.blow(this.ctx));
+    });
+    (L.logs ?? []).forEach((ld) => this.logs.push(new HollowLog(this, ld)));
+    // Expert : aucun point de contrôle (on recommence au début du niveau)
+    if (T.checkpoints) L.checkpoints.forEach((c) => this.checkpoints.push(new Checkpoint(this, c.x, c.groundY)));
+    const ex = L.exit;
+    this.door = new ExitDoor(this, ex.x, ex.groundY, ex.scootTo, () => this.win(), ex.gag ?? 'scoot', { maxX: ex.maxX, flyTo: ex.flyTo });
+    if (ex.flower && tagged[ex.flower]) tagged[ex.flower].onSneeze.push(() => this.door.sneezedOn(this.ctx));
+    if (ex.platform !== undefined && this.platforms[ex.platform]) {
+      const pl = this.platforms[ex.platform];
+      this.door.attachTo(pl);
+      this.door.setCarrierStart(pl.cfg.x);
+    }
     this.buildDecor('front');
 
     // collisions
     this.physics.add.collider(this.player.zone, terrain);
-    this.physics.add.collider(this.player.zone, this.stones.map((s) => s.zone));
+    this.physics.add.collider(this.player.zone, [...this.stones.map((s) => s.zone), ...this.pranks.map((s) => s.zone)]);
+    const gates = this.snappers.filter((s) => s.gateZone).map((s) => s.gateZone!);
+    if (gates.length) this.physics.add.collider(this.player.zone, gates);
+    if (this.platforms.length) this.physics.add.collider(this.player.zone, this.platforms.map((p) => p.zone));
+    if (this.rafts.length) this.physics.add.collider(this.player.zone, this.rafts.map((r) => r.zone));
+    const logSolids = this.logs.flatMap((l) => l.solids);
+    if (logSolids.length) this.physics.add.collider(this.player.zone, logSolids);
     if (this.flowers.length) {
       this.physics.add.collider(this.player.zone, this.flowers.map((f) => f.potZone));
       const heads = this.flowers.filter((f) => f.headZone).map((f) => f.headZone!);
@@ -141,10 +192,11 @@ export class GameScene extends Phaser.Scene {
     this.camRig.snap(this.camTarget(), 1);
     cam.fadeIn(350, 20, 40, 36);
 
-    this.hints = this.level.hints?.length ? new HintSystem(this, this.level.hints, this.player) : null;
+    const hints = (this.level.hints ?? []).filter(keep).map((h) => ({ ...h, after: h.after * T.hintDelay }));
+    this.hints = hints.length ? new HintSystem(this, hints, this.player) : null;
 
     // interface
-    this.registry.set('levelInfo', { id: L.id, name: L.name });
+    this.registry.set('levelInfo', { id: L.id, name: L.name, difficulty: T.id });
     if (this.scene.isActive('HUD') || this.scene.isPaused('HUD')) this.scene.get('HUD').scene.restart();
     else this.scene.launch('HUD');
     this.scene.bringToTop('HUD');
@@ -158,7 +210,11 @@ export class GameScene extends Phaser.Scene {
     Audio.duckMusic(0);
 
     // points d'accès pour les tests automatisés
-    (window as unknown as { __nsf: unknown }).__nsf = { scene: this, player: this.player, touch: touchState, flowers: this.flowers };
+    (window as unknown as { __nsf: unknown }).__nsf = {
+      scene: this, player: this.player, touch: touchState, flowers: this.flowers, snappers: this.snappers,
+      pranks: this.pranks, rafts: this.rafts, platforms: this.platforms, door: this.door, stones: this.stones,
+      checkpoints: this.checkpoints, difficulty: T.id
+    };
   }
 
   // ------------------------------------------------------------- boucle
@@ -327,6 +383,7 @@ export class GameScene extends Phaser.Scene {
     Bus.off(EV.quit, this.onQuit, this);
     Bus.off(EV.nextLevel, this.onNext, this);
     this.traps.forEach((t) => t.destroy());
+    this.logs.forEach((l) => l.destroy());
     this.checkpoints.forEach((c) => c.destroy());
     this.door?.destroy();
     this.player?.destroy();

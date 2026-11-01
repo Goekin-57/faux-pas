@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { DEPTH } from '../core/constants';
 import { STONE_W, STONE_H } from '../art/paint';
 import type { Trap, TrapContext } from './Trap';
+import { tuning } from '../core/Difficulty';
 
 export interface StoneConfig {
   x: number;          // centre
@@ -12,8 +13,7 @@ export interface StoneConfig {
 }
 
 // Réglages du chapitre 1 (identiques pour tous les pavés : la règle doit être apprise une fois).
-const HESITATION = 0.45; // s immobile avant le premier signe
-const WARN = 0.7;        // durée du tremblement avant que le pavé cède
+// Hésitation et avertissement dépendent de la difficulté (voir core/Difficulty).
 const RESPAWN = 2.2;
 const SINK_SPEED = 95;
 const RETURN_SPEED = 130;
@@ -48,9 +48,13 @@ export class ShyStone implements Trap {
   private glass?: Phaser.GameObjects.Graphics;
   /** Vrai dès que l'ascenseur a été utilisé une fois (pour l'indice contextuel). */
   used = false;
+  private readonly HESITATION: number;
+  private readonly WARN: number;
 
   constructor(private scene: Phaser.Scene, readonly cfg: StoneConfig, index: number) {
     this.id = `stone-${index}`;
+    this.HESITATION = tuning().stoneHesitation;
+    this.WARN = tuning().stoneWarn;
     const { x, top, kind } = cfg;
     const cy = top + STONE_H / 2;
 
@@ -120,7 +124,7 @@ export class ShyStone implements Trap {
           }
           break;
         }
-        if (standing && ctx.player.stillTime > HESITATION) {
+        if (standing && ctx.player.stillTime > this.HESITATION) {
           this.enter('warn');
           ctx.sfx('tileWarn', this.cfg.x);
           ctx.player.setExpression('worried', 700);
@@ -129,14 +133,14 @@ export class ShyStone implements Trap {
 
       case 'warn': {
         // affaissement progressif : le joueur VOIT et SENT que ça cède
-        const k = this.t / WARN;
+        const k = this.t / this.WARN;
         this.offset = Math.min(10, k * 10);
         const moving = ctx.player.stillTime < 0.05;
         if (!standing || moving) {
           this.enter('idle'); // on a bougé à temps : le pavé se calme
           break;
         }
-        if (this.t >= WARN) {
+        if (this.t >= this.WARN) {
           if (this.cfg.stopDepth) {
             this.enter('sinking');
             ctx.sfx('tileSink', this.cfg.x);
@@ -204,7 +208,7 @@ export class ShyStone implements Trap {
 
       case 'returning':
         this.offset = Math.max(0, this.offset - RETURN_SPEED * dt);
-        if (!this.cfg.stopDepth && standing && ctx.player.stillTime > HESITATION) {
+        if (!this.cfg.stopDepth && standing && ctx.player.stillTime > this.HESITATION) {
           this.enter('warn');
           ctx.sfx('tileWarn', this.cfg.x);
         } else if (this.offset <= 0) {
@@ -216,7 +220,7 @@ export class ShyStone implements Trap {
     }
 
     // vibration visuelle (pas de la hitbox) pendant l'avertissement
-    const shake = this.state === 'warn' ? Math.sin(this.time * 70) * (1 + (this.t / WARN) * 2) : 0;
+    const shake = this.state === 'warn' ? Math.sin(this.time * 70) * (1 + (this.t / this.WARN) * 2) : 0;
     const dy = this.offset - prevOffset;
 
     this.zone.y = this.cfg.top + STONE_H / 2 + this.offset;

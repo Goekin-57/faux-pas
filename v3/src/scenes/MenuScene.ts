@@ -12,6 +12,9 @@ import { MenuStage } from '../menu/MenuStage';
 import { MenuNav } from '../menu/MenuNav';
 import { paintLogoNotSo, paintLogoFast, LOGO_RES } from '../menu/paintMenu';
 import { CHAPTER_ART, ART_W, ART_H } from '../menu/chapterArt';
+import { TUNING } from '../core/Difficulty';
+import { formatTime } from '../core/Bus';
+import type { Difficulty } from '../core/Save';
 
 /**
  * Écran d'accueil : diorama vivant de la serre.
@@ -60,6 +63,9 @@ export class MenuScene extends Phaser.Scene {
     this.input.once('pointerdown', unlock);
     this.input.keyboard?.once('keydown', unlock);
     if (Audio.ctx) Audio.playMusic('menu');
+
+    // premier lancement : on choisit sa difficulté (les anciennes sauvegardes passent en Facile sans rien demander)
+    if (!Save.difficultyChosen) this.time.delayedCall(this.quick ? 300 : 1500, () => { if (!this.leaving && !this.panel) this.openDifficulty(true); });
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.nav.destroy();
@@ -150,8 +156,8 @@ export class MenuScene extends Phaser.Scene {
   // ------------------------------------------------------------ menu
 
   private buildNav(): void {
-    const firstOpen = LEVELS.find((l) => l.data && !Save.level(l.id).completed) ?? LEVELS[0];
-    const anyDone = LEVEL_ORDER.some((id) => Save.level(id).completed);
+    const firstOpen = LEVELS.find((l) => l.data && !Save.completedAny(l.id)) ?? LEVELS[0];
+    const anyDone = LEVEL_ORDER.some((id) => Save.completedAny(id));
     this.nav = new MenuNav(this, 112, 352, 56, [
       { label: anyDone ? 'Continuer' : 'Jouer', primary: true, action: () => this.startLevel(firstOpen.id) },
       { label: 'Chapitres', action: () => this.openChapters() },
@@ -217,7 +223,7 @@ export class MenuScene extends Phaser.Scene {
 
   // ------------------------------------------------------------ panneaux
 
-  private openPanel(title: string, w: number, h: number): Phaser.GameObjects.Container {
+  private openPanel(title: string, w: number, h: number, closable = true): Phaser.GameObjects.Container {
     this.closePanel();
     this.setMainEnabled(false);
     const dim = this.add.rectangle(0, 0, GAME_W, GAME_H, 0x0c1c1f, 0.45).setOrigin(0).setInteractive();
@@ -233,8 +239,10 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: inner, alpha: 1, y: GAME_H / 2, duration: 260, ease: 'Back.easeOut' });
     this.panel = this.add.container(0, 0, [dim, inner]).setDepth(DEPTH.vignette + 10);
     this.tweens.add({ targets: dim, alpha: { from: 0, to: 1 }, duration: 200 });
-    const esc = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC, false);
-    esc?.once('down', () => this.closePanel());
+    if (closable) {
+      const esc = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC, false);
+      esc?.once('down', () => this.closePanel());
+    }
     return inner;
   }
 
@@ -255,11 +263,11 @@ export class MenuScene extends Phaser.Scene {
       const cx = -2 * (cardW + 20) + i * (cardW + 20);
       const left = cx - cardW / 2;
       const levels = LEVELS.filter((l) => l.chapter === ch.n);
-      const done = levels.filter((l) => Save.level(l.id).completed).length;
+      const done = levels.filter((l) => Save.completedAny(l.id)).length;
       const built = levels.some((l) => l.data);
       // un chapitre s'ouvre quand le boss du précédent est vaincu (le 1 est toujours ouvert)
       const prevBoss = ch.n > 1 ? LEVELS.find((l) => l.chapter === ch.n - 1 && l.index === 8) : undefined;
-      const unlocked = ch.n === 1 || (!!prevBoss && Save.level(prevBoss.id).completed);
+      const unlocked = ch.n === 1 || (!!prevBoss && Save.completedAny(prevBoss.id));
       const open = unlocked && built;
 
       const card = this.add.graphics();
@@ -307,7 +315,7 @@ export class MenuScene extends Phaser.Scene {
       for (let k = 0; k < 8; k++) {
         const lx = tx + 6 + k * 21;
         const lv = levels[k];
-        const okLv = Save.level(lv.id).completed;
+        const okLv = Save.completedAny(lv.id);
         dots.fillStyle(okLv ? 0xf7d774 : open && lv.data ? 0x7fd1c7 : 0x2f4a52, 1);
         if (k === 7) dots.fillRoundedRect(lx - 6.5, dy - 6.5, 13, 13, 3);
         else dots.fillCircle(lx, dy, 5.5);
@@ -343,6 +351,8 @@ export class MenuScene extends Phaser.Scene {
       const x = -255 + col * 170, y = -70 + rowI * 120;
       const unlocked = !!lv.data && Save.isUnlocked(lv.id, LEVEL_ORDER);
       const rec = Save.level(lv.id);
+      const other: Difficulty = Save.difficulty === 'easy' ? 'expert' : 'easy';
+      const recOther = Save.level(lv.id, other);
       const b = new Button(this, x, y, lv.boss ? `${lv.id} ★` : lv.id, () => this.startLevel(lv.id), {
         width: 130, height: 50, primary: unlocked, disabled: !unlocked, fontSize: 21
       });
@@ -351,8 +361,18 @@ export class MenuScene extends Phaser.Scene {
       }).setOrigin(0.5, 0);
       inner.add([b, label]);
       if (rec.completed) inner.add(this.add.image(x + 58, y - 22, 'cp-bloom').setScale(0.22));
+      else if (recOther.completed) inner.add(this.add.image(x + 58, y - 22, 'cp-bloom').setScale(0.18).setAlpha(0.45));
+      if (rec.bestTimeMs !== null) {
+        inner.add(this.add.text(x, y + (lv.name.length > 18 ? 78 : 60), `${formatTime(rec.bestTimeMs)} · ${rec.bestDeaths ?? 0} ✿`, {
+          fontFamily: FONTS.ui, fontSize: '13px', fontStyle: '600', color: '#f7d774'
+        }).setOrigin(0.5, 0));
+      }
       buttons.push(b);
     });
+    const T = TUNING[Save.difficulty];
+    inner.add(this.add.text(0, -122, `Records en mode ${T.label}`, {
+      fontFamily: FONTS.ui, fontSize: '15px', color: Save.difficulty === 'expert' ? '#f2a27a' : '#9fc3b8'
+    }).setOrigin(0.5));
     const back = new Button(this, 0, 168, 'Retour', () => this.openChapters(), { width: 160, height: 44, fontSize: 19 });
     inner.add(back);
     buttons.push(back);
@@ -361,7 +381,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openOptions(): void {
-    const inner = this.openPanel('Options', 520, 540);
+    const inner = this.openPanel('Options', 520, 600);
     const s = () => Save.settings;
     const pct = (v: number) => `${Math.round(v * 100)} %`;
     const buttons: Button[] = [];
@@ -375,30 +395,41 @@ export class MenuScene extends Phaser.Scene {
       inner.add([l, val, minus, plus]);
       buttons.push(minus, plus);
     };
-    slider(-110, 'Musique', () => s().music, (v) => Save.updateSettings({ music: v }));
-    slider(-50, 'Effets sonores', () => s().sfx, (v) => Save.updateSettings({ sfx: v }));
+    const dLabel = () => `Difficulté : ${TUNING[Save.difficulty].label}`;
+    const diffBtn = new Button(this, 0, -196, dLabel(), () => {
+      Save.setDifficulty(Save.difficulty === 'easy' ? 'expert' : 'easy');
+      diffBtn.setText(dLabel());
+      diffNote.setText(this.difficultyBlurb(Save.difficulty));
+    }, { width: 360, height: 44, fontSize: 19, primary: true });
+    const diffNote = this.add.text(0, -166, this.difficultyBlurb(Save.difficulty), {
+      fontFamily: FONTS.ui, fontSize: '14px', color: '#9fc3b8'
+    }).setOrigin(0.5, 0);
+    inner.add([diffBtn, diffNote]);
+    buttons.push(diffBtn);
+    slider(-62, 'Musique', () => s().music, (v) => Save.updateSettings({ music: v }));
+    slider(-10, 'Effets sonores', () => s().sfx, (v) => Save.updateSettings({ sfx: v }));
 
-    const muteBtn = new Button(this, 0, 14, s().muted ? 'Son : coupé' : 'Son : activé', () => {
+    const muteBtn = new Button(this, 0, 46, s().muted ? 'Son : coupé' : 'Son : activé', () => {
       const m = Audio.toggleMute();
       muteBtn.setText(m ? 'Son : coupé' : 'Son : activé');
     }, { width: 300, height: 46, fontSize: 19 });
     const touchLabel = (v: string) => `Commandes tactiles : ${v === 'auto' ? 'auto' : v === 'on' ? 'oui' : 'non'}`;
-    const touchBtn = new Button(this, 0, 72, touchLabel(s().touchControls), () => {
+    const touchBtn = new Button(this, 0, 100, touchLabel(s().touchControls), () => {
       const order = ['auto', 'on', 'off'] as const;
       const next = order[(order.indexOf(s().touchControls) + 1) % 3];
       Save.updateSettings({ touchControls: next });
       touchBtn.setText(touchLabel(next));
     }, { width: 300, height: 46, fontSize: 19 });
     const qLabel = (q: string) => `Netteté : ${q === 'perf' ? 'économe' : 'maximale'}`;
-    const qualityBtn = new Button(this, 0, -166, qLabel(s().quality), () => {
+    const qualityBtn = new Button(this, 0, -114, qLabel(s().quality), () => {
       const next = s().quality === 'perf' ? 'auto' : 'perf';
       Save.updateSettings({ quality: next });
       qualityBtn.setText(qLabel(next) + ' (au redémarrage)');
-    }, { width: 360, height: 40, fontSize: 17 });
+    }, { width: 360, height: 36, fontSize: 16 });
     inner.add(qualityBtn);
-    buttons.push(qualityBtn);
+    buttons.splice(1, 0, qualityBtn);
     let armed = false;
-    const resetBtn = new Button(this, 0, 130, 'Effacer la progression', () => {
+    const resetBtn = new Button(this, 0, 154, 'Effacer la progression', () => {
       if (!armed) {
         armed = true;
         resetBtn.setText('Confirmer l’effacement ?');
@@ -409,10 +440,51 @@ export class MenuScene extends Phaser.Scene {
         resetBtn.setText('Progression effacée');
       }
     }, { width: 300, height: 46, fontSize: 19 });
-    const back = new Button(this, 0, 196, 'Retour', () => { this.closePanel(); this.scene.restart({ quick: true }); }, { width: 160, height: 44, fontSize: 19 });
+    const back = new Button(this, 0, 222, 'Retour', () => { this.closePanel(); this.scene.restart({ quick: true }); }, { width: 160, height: 44, fontSize: 19 });
     inner.add([muteBtn, touchBtn, resetBtn, back]);
     buttons.push(muteBtn, touchBtn, resetBtn, back);
     this.panelList = new ButtonList(this, buttons, () => { this.closePanel(); this.scene.restart({ quick: true }); });
+    this.panelList.focusFirst();
+  }
+
+  private difficultyBlurb(d: Difficulty): string {
+    return d === 'expert' ? 'Pièges plus rapides et plus malins · aucun point de contrôle' : 'Pièges lisibles · 1 point de contrôle · morts illimitées';
+  }
+
+  /** Choix de la difficulté (premier lancement). Modifiable ensuite dans les Options. */
+  private openDifficulty(first: boolean): void {
+    const inner = this.openPanel('Comment veux-tu jouer ?', 760, 470, !first);
+    const buttons: Button[] = [];
+    const card = (cx: number, d: Difficulty, lines: string[]) => {
+      const T = TUNING[d];
+      const w = 320, h = 270, top = -150;
+      const g = this.add.graphics();
+      g.fillStyle(0x10272d, 1);
+      g.fillRoundedRect(cx - w / 2, top, w, h, 20);
+      g.lineStyle(2, d === 'expert' ? 0xe8846b : 0x7fd1c7, 0.7);
+      g.strokeRoundedRect(cx - w / 2, top, w, h, 20);
+      // emblème : une fleur calme ou un piège qui guette
+      const icon = this.add.image(cx, top + 48, d === 'expert' ? 'snap-eyes-open' : 'cp-bloom').setScale(d === 'expert' ? 0.7 : 0.5);
+      if (d === 'expert') this.tweens.add({ targets: icon, scaleX: 0.74, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      else this.tweens.add({ targets: icon, angle: 360, duration: 9000, repeat: -1 });
+      const title = this.add.text(cx, top + 96, T.label, { fontFamily: FONTS.display, fontSize: '30px', color: d === 'expert' ? '#f7b08a' : '#bfeee6' }).setOrigin(0.5);
+      const body = this.add.text(cx, top + 128, lines.map((l) => `•  ${l}`).join('\n'), {
+        fontFamily: FONTS.ui, fontSize: '16px', color: '#e6f1ec', lineSpacing: 6, wordWrap: { width: w - 44 }
+      }).setOrigin(0.5, 0);
+      const b = new Button(this, cx, top + h + 34, d === 'expert' ? 'Jouer en Expert' : 'Jouer en Facile', () => {
+        Save.setDifficulty(d);
+        Audio.sfx(d === 'expert' ? 'snapWake' : 'checkpoint');
+        this.closePanel();
+      }, { primary: d === 'easy', width: 230, height: 46, fontSize: 19 });
+      inner.add([g, icon, title, body, b]);
+      buttons.push(b);
+    };
+    card(-180, 'easy', ['Pièges lisibles', 'Un point de contrôle par niveau', 'Morts illimitées']);
+    card(180, 'expert', ['Pièges plus rapides', 'Ils anticipent tes sauts et tes hésitations', 'Aucun point de contrôle']);
+    inner.add(this.add.text(0, 214, 'Tu pourras changer à tout moment dans les Options (ta progression est conservée).', {
+      fontFamily: FONTS.ui, fontSize: '14px', color: '#9fc3b8'
+    }).setOrigin(0.5));
+    this.panelList = new ButtonList(this, buttons, first ? undefined : () => this.closePanel());
     this.panelList.focusFirst();
   }
 

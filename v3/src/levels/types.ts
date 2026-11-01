@@ -1,4 +1,8 @@
 import type { FlowerDef } from '../traps/Sneezer';
+import type { Difficulty } from '../core/Save';
+
+/** Élément réservé à une difficulté (absent sinon). */
+export interface OnlyIn { only?: Difficulty }
 
 // Format de données d'un niveau. Chaque niveau est composé à la main :
 // aucune génération aléatoire d'obstacles.
@@ -11,16 +15,33 @@ export interface TerrainDef {
   style?: 'bed' | 'hedge' | 'ceiling';
 }
 
-export interface StoneDef {
+export interface StoneDef extends OnlyIn {
   x: number;           // centre
   top: number;
-  kind: 'matte' | 'polished';
+  /** 'prank' : pavé farceur (ressort, accroche du 1-1). */
+  kind: 'matte' | 'polished' | 'prank';
   base: number;        // ancrage de la tige / du pilier
   stopDepth?: number;
 }
 
 export interface ThornsDef { x: number; w: number; top: number }
-export interface SnapperDef { x: number; pathY: number; offset?: number }
+export interface SnapperDef extends OnlyIn {
+  x: number;
+  pathY: number;
+  offset?: number;
+  /** Dionée maladroite : bouton sous elle, grille qu'il ouvre. */
+  lure?: { leverX: number; gate: { x: number; top: number; w: number; h: number } };
+}
+
+export interface PlatformDef extends OnlyIn {
+  x: number; top: number; w: number;
+  /** Oscillation (Expert seulement si moveOnly = 'expert'). */
+  move?: { dx: number; period: number };
+  moveOnly?: Difficulty;
+}
+
+export interface RaftDef { x: number; top: number; w: number; endX: number; /** tag de la fleur qui gonfle la voile */ flower: string }
+export interface LogDef { x: number; groundY: number; w: number; inner: number; sign?: string }
 export interface CheckpointDef { x: number; groundY: number }
 
 export interface DecorDef {
@@ -36,7 +57,7 @@ export interface DecorDef {
  * Indice contextuel : n'apparaît que si le joueur reste bloqué dans une zone.
  * Jamais affiché d'emblée (le piège garde sa surprise).
  */
-export interface HintDef {
+export interface HintDef extends OnlyIn {
   id: string;
   area: { x: number; w: number; yMax: number }; // zone où l'on considère le joueur "bloqué"
   after: number;                                 // secondes cumulées dans la zone
@@ -45,6 +66,7 @@ export interface HintDef {
   text: string;
   solvedBelowY?: number;                         // résolu dès que le joueur passe sous cette hauteur
   solvedRightOf?: number;                        // … ou à droite de cette position
+  solvedAboveY?: number;                         // … ou au-dessus de cette hauteur
 }
 
 export interface LevelData {
@@ -60,10 +82,23 @@ export interface LevelData {
   stones: StoneDef[];
   thorns: ThornsDef[];
   snappers: SnapperDef[];
-  flowers?: FlowerDef[];
+  flowers?: (FlowerDef & OnlyIn & { tag?: string })[];
+  platforms?: PlatformDef[];
+  rafts?: RaftDef[];
+  logs?: LogDef[];
+  /** Mode Facile uniquement (le mode Expert n'a aucun point de contrôle). */
   checkpoints: CheckpointDef[];
-  /** gag 'scoot' : la porte recule si on arrive en courant (1-1). */
-  exit: { x: number; groundY: number; scootTo: number; gag?: 'scoot' | 'none' };
+  /**
+   * gag 'dodge' : la porte esquive si on lui fonce dessus (1-1).
+   * gag 'fly'   : une fleur (tag `flower`) l'envoie sur une plateforme (index `platform`).
+   */
+  exit: {
+    x: number; groundY: number; scootTo: number; gag?: 'scoot' | 'dodge' | 'fly' | 'none';
+    maxX?: number;
+    flyTo?: { x: number; groundY: number };
+    flower?: string;
+    platform?: number;
+  };
   decor: DecorDef[];
   darkZones?: { x: number; w: number; top: number; h: number }[]; // tunnels (assombrissement)
   hints?: HintDef[];
