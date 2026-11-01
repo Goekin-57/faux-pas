@@ -6,7 +6,15 @@ Jeu de plateforme « troll » pour navigateur : le sol ment, les panneaux menten
 - 41 niveaux en 5 chapitres + un niveau spécial Halloween, 3 cœurs, boss à phases.
 - Clavier, tactile et manette (Xbox / PlayStation).
 
-## Version 2 (Phaser 4) — en cours
+## Version 3 (Phaser 4) — développement actuel
+
+Nouvelle version écrite de zéro d'après le « prompt maître » : 5 chapitres × 8 niveaux, direction artistique illustrée, pièges qui observent le joueur.
+
+- **Jouer en ligne** : [goekin-57.github.io/faux-pas/jeu-v3/](https://goekin-57.github.io/faux-pas/jeu-v3/)
+- **Code source** : `v3/` (Phaser 4 + TypeScript + Vite) — détails dans [v3/README.md](v3/README.md)
+- État : écran d'accueil animé, chapitre 1 en cours (niveau 1-1 « Le chemin trop poli » jouable), clavier, tactile et manette.
+
+## Version 2 (Phaser 4) — essai précédent
 
 Refonte complète dans `v2/` (code TypeScript) et `jeu-v2/` (jeu compilé, jouable sur GitHub Pages). Détails et état d'avancement : [v2/README.md](v2/README.md).
 

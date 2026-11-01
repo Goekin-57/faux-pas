@@ -1,0 +1,133 @@
+import type { LevelData, StoneDef } from '../types';
+
+/**
+ * 1-1 — LE CHEMIN TROP POLI
+ * Signature : le sol réagit à l'HÉSITATION plutôt qu'au contact.
+ *
+ * Langage visuel appris dans ce niveau (réutilisé ensuite) :
+ *  - pavé MAT, posé sur un pilier de pierre  → fiable, on peut s'y arrêter ;
+ *  - pavé POLI (brillant, arêtes nettes, scintille), posé sur une tige → ne pas s'y attarder.
+ *
+ * Temps 1 (découverte)   : un pavé poli au-dessus d'un fossé sans danger, puis un chemin poli à traverser.
+ * Temps 2 (complication) : une Dionée force à attendre… et l'instinct fait attendre au mauvais endroit.
+ * Temps 3 (récompense)   : une haie infranchissable ; il faut VOLONTAIREMENT hésiter sur un pavé
+ *                          pour qu'il serve d'ascenseur vers le tunnel. Final : alterner marche et observation.
+ */
+
+const H = 1000;
+const G = 560; // niveau du sol principal
+
+/** Rangée de pavés jointifs (largeur 104, pas 106). */
+function row(startLeft: number, top: number, base: number, kinds: ('m' | 'p')[]): StoneDef[] {
+  return kinds.map((k, i) => ({
+    x: startLeft + 52 + i * 106,
+    top,
+    base,
+    kind: k === 'm' ? 'matte' : 'polished'
+  }));
+}
+
+export function level1_1(): LevelData {
+  return {
+    id: '1-1',
+    chapter: 1,
+    index: 1,
+    name: 'Le chemin trop poli',
+    signature: "Le sol réagit à l'hésitation plutôt qu'au simple contact.",
+    width: 8620,
+    height: H,
+    spawn: { x: 150, y: G - 30 },
+
+    terrain: [
+      // --- Temps 1
+      { x: 0, top: G, w: 660 },
+      { x: 660, top: 496, w: 330 },
+      { x: 990, top: 680, w: 380 },          // fossé sans danger (on en ressort en sautant)
+      { x: 1370, top: G, w: 330 },
+      { x: 2340, top: G, w: 520 },
+      // --- Temps 2
+      { x: 3498, top: G, w: 320 },
+      { x: 3650, top: 480, w: 168 },
+      { x: 4600, top: 470, w: 500 },
+      { x: 5100, top: G, w: 300 },
+      // --- Temps 3
+      { x: 5400, top: 808, w: 120 },          // fond du puits de l'ascenseur
+      { x: 5520, top: 300, w: 160, h: 390, style: 'hedge' },
+      { x: 5680, top: G, w: 880, h: 130, style: 'ceiling' },
+      { x: 5520, top: 780, w: 520 },          // tunnel
+      { x: 6360, top: 780, w: 340 },
+      { x: 6700, top: 700, w: 160 },
+      { x: 6860, top: 620, w: 160 },
+      { x: 7020, top: G, w: 260 },
+      { x: 7918, top: G, w: 702 }
+    ],
+
+    stones: [
+      // découverte : un pavé poli seul, au-dessus d'un fossé inoffensif
+      { x: 1180, top: 520, kind: 'polished', base: 680 },
+      // le "chemin trop poli" : on traverse sans s'arrêter
+      ...row(1701, G, 860, ['p', 'p', 'p', 'p', 'p', 'p']),
+      // Dionée n°1 : le pavé mat d'avant est la bonne place pour attendre
+      ...row(2861, G, 860, ['m', 'p', 'p', 'p', 'm', 'p']),
+      // pavés isolés en escalier : hésiter avant de viser le saut suivant = danger
+      { x: 3930, top: 520, kind: 'polished', base: 860 },
+      { x: 4110, top: 460, kind: 'polished', base: 860 },
+      { x: 4290, top: 410, kind: 'polished', base: 860 },
+      { x: 4470, top: 410, kind: 'matte', base: 860 },
+      // l'ascenseur : il faut hésiter EXPRÈS
+      { x: 5458, top: G, kind: 'polished', base: 808, stopDepth: 220 },
+      // tunnel : plafond bas, impossible de sauter, il faut marcher sans s'arrêter
+      ...row(6041, 780, 900, ['p', 'p', 'p']),
+      // final : marche / observation / marche
+      ...row(7281, G, 860, ['p', 'p', 'm', 'p', 'p', 'p'])
+    ],
+
+    thorns: [
+      { x: 1700, w: 640, top: 840 },
+      { x: 2860, w: 638, top: 840 },
+      { x: 3818, w: 782, top: 840 },
+      { x: 6040, w: 320, top: 860 },
+      { x: 7280, w: 638, top: 840 }
+    ],
+
+    snappers: [
+      { x: 3125, pathY: G, offset: 0 },
+      { x: 4470, pathY: 410, offset: 0.8 },
+      { x: 7439, pathY: G, offset: 0 },
+      { x: 7757, pathY: G, offset: 1.55 }
+    ],
+
+    checkpoints: [
+      { x: 2470, groundY: G },
+      { x: 4720, groundY: 470 },
+      { x: 5160, groundY: G },
+      { x: 7080, groundY: G }
+    ],
+
+    exit: { x: 8150, groundY: G, scootTo: 8340 },
+
+    decor: [
+      { type: 'can', x: 300, y: G },
+      { type: 'bush', x: 520, y: G },
+      { type: 'bush', x: 1560, y: G, flip: true },
+      { type: 'bush', x: 2700, y: G },
+      { type: 'can', x: 3560, y: G, flip: true },
+      { type: 'bush', x: 4980, y: 470, flip: true },
+      { type: 'shaft', x: 5400, y: G, w: 120, h: 248 },
+      { type: 'lantern', x: 5800, y: 700 },
+      { type: 'mushrooms', x: 5700, y: 780 },
+      { type: 'mushrooms', x: 5960, y: 780, flip: true },
+      { type: 'lantern', x: 6200, y: 700 },
+      { type: 'mushrooms', x: 6480, y: 780 },
+      { type: 'bush', x: 6780, y: 700 },
+      { type: 'bush', x: 8460, y: G, flip: true },
+      { type: 'fgLeaf', x: 900, y: H },
+      { type: 'fgLeaf', x: 2600, y: H, flip: true },
+      { type: 'fgLeaf', x: 4300, y: H },
+      { type: 'fgLeaf', x: 7000, y: H, flip: true },
+      { type: 'fgLeaf', x: 8500, y: H }
+    ],
+
+    darkZones: [{ x: 5520, w: 1040, top: 690, h: 120 }]
+  };
+}
