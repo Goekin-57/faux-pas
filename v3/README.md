@@ -36,6 +36,7 @@ Les manettes (disposition standard : Xbox, PlayStation, Switch Pro, génériques
 - Architecture complète pour 5 chapitres × 8 niveaux (registre des 40 niveaux, sélection, sauvegarde).
 - Direction artistique du chapitre 1 « La Serre des Évidences ».
 - **Niveaux 1-1 « Le chemin trop poli » et 1-2 « Les fleurs indiscrètes » entièrement jouables.**
+- **Bonus Halloween « Le Manoir des Trouillards »** : niveau indépendant en 7 zones + mini-boss, accessible depuis l'accueil (« Manoir hanté ») et la carte spéciale de l'écran Chapitres (`src/halloween/`, `src/levels/bonus/`).
 - **Deux difficultés (v0.5)** : Facile (pièges lisibles, 1 point de contrôle) et Expert (pièges plus rapides qui anticipent sauts et hésitations, aucun point de contrôle). Choix au premier lancement, modifiable dans les Options ou en pause ; records séparés. Détails : `docs/MECANIQUES.md`.
 - Tutoriel des commandes au premier niveau joué (clavier, manette ou tactile, détecté automatiquement).
 - Indices contextuels discrets si le joueur reste bloqué.

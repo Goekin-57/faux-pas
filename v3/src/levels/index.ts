@@ -1,6 +1,7 @@
 import type { ChapterMeta, LevelMeta } from './types';
 import { level1_1 } from './chapter1/level1_1';
 import { level1_2 } from './chapter1/level1_2';
+import { halloween } from './bonus/halloween';
 
 export const CHAPTERS: ChapterMeta[] = [
   { n: 1, name: 'La Serre des Évidences', palette: [0x8fb59a, 0x7fd1c7, 0xf6b89a, 0xf7d774] },
@@ -37,8 +38,13 @@ export const LEVELS: LevelMeta[] = NAMES.flatMap((names, ci) =>
 
 export const LEVEL_ORDER = LEVELS.map((l) => l.id);
 
+/** Niveaux bonus : hors de la progression, toujours accessibles. */
+export const BONUS_LEVELS: LevelMeta[] = [
+  { id: 'H-1', chapter: 0, index: 1, name: 'Le Manoir des Trouillards', data: halloween }
+];
+
 export function levelMeta(id: string): LevelMeta | undefined {
-  return LEVELS.find((l) => l.id === id);
+  return LEVELS.find((l) => l.id === id) ?? BONUS_LEVELS.find((l) => l.id === id);
 }
 
 export function nextLevel(id: string): LevelMeta | undefined {

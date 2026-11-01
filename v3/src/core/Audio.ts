@@ -50,9 +50,9 @@ class AudioEngine {
     return Save.settings.muted;
   }
 
-  playMusic(theme: 'greenhouse' | 'menu'): void {
+  playMusic(theme: MusicTheme): void {
     if (!this.ctx) return;
-    if (this.music?.theme === theme) return;
+    if (this.music?.theme === theme) { this.music.mood = 'normal'; return; }
     this.music?.stop();
     this.music = new MusicPlayer(this.ctx, this.musicBus, theme);
     this.music.start();
@@ -61,6 +61,11 @@ class AudioEngine {
   stopMusic(): void {
     this.music?.stop();
     this.music = null;
+  }
+
+  /** Humeur de la musique du manoir : normale, tendue (monstre), boss, silence. */
+  setMood(m: MusicMood): void {
+    if (this.music) this.music.mood = m;
   }
 
   /** Atténue la musique (pause, mort) sans la couper. */
@@ -233,6 +238,76 @@ class AudioEngine {
         this.tone(out, t, 'sine', 900, 1300, 0.12, 0.04);
         this.tone(out, t + 0.12, 'sine', 1300, 900, 0.14, 0.03);
         break;
+      // --- manoir (Halloween) : petites surprises, jamais agressives
+      case 'creak':
+        this.tone(out, t, 'sawtooth', 180 + 60 * k, 120, 0.45, 0.03, 26);
+        this.noise(out, t, 0.35, 700, 0.03, 'bandpass', 0.08);
+        break;
+      case 'boo':
+        // « Bouh ! » de fantôme : glissando doux, un peu ridicule
+        this.tone(out, t, 'sine', 300, 520, 0.28, 0.07, 7);
+        this.tone(out, t + 0.22, 'sine', 520, 260, 0.4, 0.06, 7);
+        break;
+      case 'roll':
+        this.noise(out, t, 0.32 * Math.max(0.4, k), 260, 0.08, 'lowpass', 0.03);
+        this.tone(out, t, 'triangle', 70, 60, 0.3, 0.05);
+        break;
+      case 'squeak':
+        // cri ridicule (citrouille, monstre)
+        this.tone(out, t, 'square', 900 * Math.max(0.6, k), 1700 * Math.max(0.6, k), 0.12, 0.05, 30);
+        this.tone(out, t + 0.12, 'square', 1500 * Math.max(0.6, k), 700 * Math.max(0.6, k), 0.3, 0.045, 24);
+        break;
+      case 'yelp':
+        // grand monstre terrorisé : « WAAAAH » qui part dans les aigus
+        this.tone(out, t, 'sawtooth', 160, 820, 0.55, 0.06, 9);
+        this.tone(out, t + 0.05, 'square', 220, 1100, 0.55, 0.03, 12);
+        this.noise(out, t, 0.5, 1400, 0.04, 'bandpass', 0.1);
+        break;
+      case 'sting':
+        // ponctuation comique (trombone + grelot)
+        [392, 370, 349, 262].forEach((f, i) => this.tone(out, t + i * 0.16, 'sawtooth', f, f * (i === 3 ? 0.9 : 1), 0.18 + (i === 3 ? 0.3 : 0), 0.035, i === 3 ? 6 : 0));
+        break;
+      case 'stomp':
+        this.tone(out, t, 'sine', 70, 38, 0.35, 0.22 * Math.max(0.3, k));
+        this.noise(out, t, 0.2, 180, 0.08 * Math.max(0.3, k), 'lowpass');
+        break;
+      case 'candle':
+        this.noise(out, t, 0.18, 2200, 0.03, 'highpass', 0.02);
+        break;
+      case 'web':
+        this.tone(out, t, 'sine', 140, 420, 0.3, 0.09, 18);
+        this.tone(out, t + 0.05, 'triangle', 280, 840, 0.22, 0.03);
+        break;
+      case 'book':
+        this.noise(out, t, 0.12, 900, 0.18, 'lowpass');
+        this.tone(out, t, 'square', 160, 90, 0.1, 0.06);
+        break;
+      case 'laugh':
+        // rire du Roi Citrouille : « ho ho ho » grave
+        [0, 0.22, 0.44].forEach((d, i) => this.tone(out, t + d, 'sawtooth', 150 - i * 12, 120 - i * 12, 0.18, 0.06, 6));
+        break;
+      case 'slam':
+        this.tone(out, t, 'sine', 90, 30, 0.5, 0.28);
+        this.noise(out, t, 0.35, 400, 0.18, 'lowpass');
+        break;
+      case 'crack':
+        for (let i = 0; i < 4; i++) this.noise(out, t + i * 0.04, 0.05, 2600 - i * 300, 0.12, 'bandpass');
+        break;
+      case 'chime':
+        [659, 523, 587, 392].forEach((f, i) => this.bell(out, t + i * 0.4, f, 0.04));
+        break;
+      case 'bats':
+        for (let i = 0; i < 6; i++) this.noise(out, t + i * 0.05, 0.04, 3000 + (i % 3) * 600, 0.025, 'bandpass');
+        break;
+      case 'pop':
+        this.tone(out, t, 'sine', 500, 1400, 0.08, 0.08);
+        break;
+      case 'tick':
+        this.noise(out, t, 0.02, 4200, 0.04, 'highpass');
+        break;
+      case 'teleport':
+        this.tone(out, t, 'sine', 300, 900, 0.22, 0.05, 10);
+        break;
     }
   }
 
@@ -295,7 +370,12 @@ export type SfxName =
   | 'snapWake' | 'chomp' | 'deathPrick' | 'deathChomp' | 'respawn'
   | 'checkpoint' | 'doorScoot' | 'doorOpen' | 'victory' | 'uiHover' | 'uiClick' | 'bubble'
   | 'whoosh' | 'logoThud' | 'sneezeIn' | 'sneeze' | 'giggle' | 'boing' | 'liftStart' | 'hourglass' | 'sniff' | 'dazed'
-  | 'grumble' | 'clonk' | 'gate' | 'phew' | 'spring' | 'suck' | 'flap' | 'raft' | 'shy';
+  | 'grumble' | 'clonk' | 'gate' | 'phew' | 'spring' | 'suck' | 'flap' | 'raft' | 'shy'
+  | 'creak' | 'boo' | 'roll' | 'squeak' | 'yelp' | 'sting' | 'stomp' | 'candle' | 'web' | 'book'
+  | 'laugh' | 'slam' | 'crack' | 'chime' | 'bats' | 'pop' | 'tick' | 'teleport';
+
+export type MusicTheme = 'greenhouse' | 'menu' | 'manor';
+export type MusicMood = 'normal' | 'tense' | 'boss' | 'silent';
 
 // ---------- Musique générative douce ----------
 // Serre : pentatonique de Fa, marimba + nappe + basse pizzicato, ~88 BPM.
@@ -306,8 +386,9 @@ class MusicPlayer {
   private step = 0;
   private bus: GainNode;
   private rngState = 7;
+  mood: MusicMood = 'normal';
 
-  constructor(private ctx: AudioContext, out: AudioNode, readonly theme: 'greenhouse' | 'menu') {
+  constructor(private ctx: AudioContext, out: AudioNode, readonly theme: MusicTheme) {
     this.bus = ctx.createGain();
     this.bus.gain.value = 0;
     this.bus.connect(out);
@@ -340,7 +421,7 @@ class MusicPlayer {
   }
 
   private schedule(): void {
-    const bpm = this.theme === 'menu' ? 80 : 88;
+    const bpm = this.theme === 'menu' ? 80 : this.theme === 'manor' ? (this.mood === 'boss' ? 112 : 92) : 88;
     const stepDur = 60 / bpm / 4;
     while (this.nextTime < this.ctx.currentTime + 0.12) {
       this.playStep(this.step, this.nextTime, stepDur);
@@ -349,7 +430,92 @@ class MusicPlayer {
     }
   }
 
+  /**
+   * Manoir : Ré mineur, boîte à musique + pizzicatos + piano grave, quelques notes « de travers »
+   * (humour). Humeur tendue : nappe grave et battements de cœur. Boss : ostinato plus vif.
+   */
+  private playManor(step: number, t: number, sd: number): void {
+    const midi = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
+    const bar = Math.floor(step / 16);
+    const s = step % 16;
+    if (this.mood === 'silent') return;
+    if (this.mood === 'tense') {
+      if (s === 0) this.pad(t, midi(38), sd * 16);
+      if (s === 0 || s === 3) this.pluck(t, midi(26), 0.16, 0.35);
+      if (s === 8 && bar % 2 === 1) this.pad(t, midi(39), sd * 8);
+      return;
+    }
+    // Rém / Si♭ / Solm / La7
+    const chords = [[50, 53, 57], [46, 50, 53], [43, 46, 50], [45, 49, 52]];
+    const chord = chords[bar % 4];
+    const boss = this.mood === 'boss';
+    if (s === 0) chord.forEach((n) => this.pad(t, midi(n), sd * 16));
+    // pizzicatos (marche de petits fantômes)
+    const pz = boss ? [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1] : [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0];
+    if (pz[s]) this.pluck(t, midi(chord[s % 8 === 0 ? 0 : 2] - 12), 0.1, 0.28);
+    // boîte à musique : mélodie fixe, mystérieuse
+    const mel = [74, -1, 77, -1, 76, 74, -1, 73, 74, -1, 69, -1, 70, -1, 69, -1];
+    const mel2 = [77, -1, 81, -1, 79, 77, -1, 76, 77, -1, 74, -1, 73, -1, -1, -1];
+    const line = bar % 8 < 4 ? mel : mel2;
+    if (line[s] > 0 && (bar % 4 !== 3 || s < 12)) this.musicBox(t, midi(line[s] + (boss ? 0 : 0)), boss ? 0.045 : 0.05);
+    // la note « de travers » : un petit glissando comique en fin de phrase
+    if (bar % 8 === 7 && s === 14) this.slide(t, midi(70), midi(62), 0.03);
+    // tic-tac de l'horloge
+    if (s % 4 === 0) this.tickTock(t, s % 8 === 0);
+  }
+
+  private musicBox(t: number, f: number, vol: number): void {
+    const c = this.ctx;
+    const o = c.createOscillator();
+    const o2 = c.createOscillator();
+    const g = c.createGain();
+    o.type = 'sine';
+    o2.type = 'sine';
+    o.frequency.value = f * 2;
+    o2.frequency.value = f * 5.02;
+    const g2 = c.createGain();
+    g2.gain.value = 0.18;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    o.connect(g);
+    o2.connect(g2).connect(g);
+    g.connect(this.bus);
+    o.start(t); o2.start(t);
+    o.stop(t + 1.15); o2.stop(t + 1.15);
+  }
+
+  private slide(t: number, f0: number, f1: number, vol: number): void {
+    const c = this.ctx;
+    const o = c.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + 0.35);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    o.connect(g).connect(this.bus);
+    o.start(t);
+    o.stop(t + 0.45);
+  }
+
+  private tickTock(t: number, tick: boolean): void {
+    const c = this.ctx;
+    const o = c.createOscillator();
+    o.type = 'square';
+    o.frequency.value = tick ? 2400 : 1800;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.006, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    o.connect(g).connect(this.bus);
+    o.start(t);
+    o.stop(t + 0.04);
+  }
+
   private playStep(step: number, t: number, sd: number): void {
+    if (this.theme === 'manor') { this.playManor(step, t, sd); return; }
     // Fa maj7 / Ré m7 / Si♭ maj7 / Do sus
     const chords = [
       [53, 57, 60, 64],

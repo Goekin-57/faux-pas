@@ -20,7 +20,8 @@ import { HollowLog } from '../traps/HollowLog';
 import { tuning } from '../core/Difficulty';
 import type { DeathKind, Trap, TrapContext } from '../traps/Trap';
 import { overlaps } from '../traps/Trap';
-import type { LevelData } from '../levels/types';
+import type { LevelData, LevelScript } from '../levels/types';
+import { buildManorBackdrop, paintManorTerrain, paintSpikes, ManorAmbience } from '../halloween/ManorBackdrop';
 import { levelMeta, nextLevel } from '../levels';
 import { ensureCanvas, paintChapter1 } from '../art/textures';
 import { buildGreenhouseBackdrop } from '../art/Backdrop';
@@ -54,6 +55,9 @@ export class GameScene extends Phaser.Scene {
   private hedges: Phaser.GameObjects.Image[] = [];
   private rustleT = 0;
   private statsTimer = 0;
+  private script: LevelScript | null = null;
+  private ambience: ManorAmbience | null = null;
+  private teleporting = false;
 
   constructor() {
     super('Game');
@@ -77,6 +81,9 @@ export class GameScene extends Phaser.Scene {
     this.deaths = 0;
     this.elapsed = 0;
     this.finished = false;
+    this.script = null;
+    this.ambience = null;
+    this.teleporting = false;
   }
 
   create(): void {
@@ -86,7 +93,9 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, -400, L.width, L.height + 600);
     this.physics.world.setBoundsCollision(true, true, false, false);
 
-    buildGreenhouseBackdrop(this, L.width, 180);
+    const manor = L.theme === 'manor';
+    if (manor) this.ambience = buildManorBackdrop(this, L);
+    else buildGreenhouseBackdrop(this, L.width, 180);
     this.buildDarkZones();
     this.buildDecor('back');
     const terrain = this.buildTerrain();
@@ -153,6 +162,13 @@ export class GameScene extends Phaser.Scene {
     const ex = L.exit;
     this.door = new ExitDoor(this, ex.x, ex.groundY, ex.scootTo, () => this.win(), ex.gag ?? 'scoot', { maxX: ex.maxX, flyTo: ex.flyTo });
     if (ex.flower && tagged[ex.flower]) tagged[ex.flower].onSneeze.push(() => this.door.sneezedOn(this.ctx));
+    if (L.script) {
+      this.script = L.script({
+        scene: this, ctx: this.ctx, player: this.player, level: L, ambience: this.ambience,
+        teleport: (x, y, fade) => this.teleportPlayer(x, y, fade)
+      });
+      this.traps.push(...this.script.traps);
+    }
     if (ex.platform !== undefined && this.platforms[ex.platform]) {
       const pl = this.platforms[ex.platform];
       this.door.attachTo(pl);
@@ -167,6 +183,7 @@ export class GameScene extends Phaser.Scene {
     if (gates.length) this.physics.add.collider(this.player.zone, gates);
     if (this.platforms.length) this.physics.add.collider(this.player.zone, this.platforms.map((p) => p.zone));
     if (this.rafts.length) this.physics.add.collider(this.player.zone, this.rafts.map((r) => r.zone));
+    if (this.script?.solids.length) this.physics.add.collider(this.player.zone, this.script.solids);
     const logSolids = this.logs.flatMap((l) => l.solids);
     if (logSolids.length) this.physics.add.collider(this.player.zone, logSolids);
     if (this.flowers.length) {
@@ -206,14 +223,14 @@ export class GameScene extends Phaser.Scene {
     Bus.on(EV.nextLevel, this.onNext, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
 
-    Audio.playMusic('greenhouse');
+    Audio.playMusic(manor ? 'manor' : 'greenhouse');
     Audio.duckMusic(0);
 
     // points d'accès pour les tests automatisés
     (window as unknown as { __nsf: unknown }).__nsf = {
       scene: this, player: this.player, touch: touchState, flowers: this.flowers, snappers: this.snappers,
       pranks: this.pranks, rafts: this.rafts, platforms: this.platforms, door: this.door, stones: this.stones,
-      checkpoints: this.checkpoints, difficulty: T.id
+      checkpoints: this.checkpoints, difficulty: T.id, script: this.script, ambience: this.ambience
     };
   }
 
@@ -241,6 +258,8 @@ export class GameScene extends Phaser.Scene {
       }
     }
     this.door.update(dt, this.ctx);
+    this.script?.update(dt);
+    this.ambience?.update(dt, this.player);
 
     if (this.player.alive && !this.finished) {
       this.elapsed += delta;
@@ -278,7 +297,7 @@ export class GameScene extends Phaser.Scene {
   private kill(kind: DeathKind, source?: Trap): void {
     if (!this.player.alive || this.finished) return;
     this.deaths++;
-    Save.addDeath();
+    Save.addDeath(this.level.id);
     Bus.emit(EV.stats, { deaths: this.deaths, timeMs: this.elapsed });
     Audio.duckMusic(0.55);
     this.sfx(kind === 'chomp' ? 'deathChomp' : 'deathPrick', this.player.x);
@@ -297,6 +316,29 @@ export class GameScene extends Phaser.Scene {
     this.sfx('respawn', this.respawn.x);
     this.controls.consumeJump();
     Audio.duckMusic(0);
+    this.script?.onRespawn();
+  }
+
+  /** Téléportation (portes du manoir) : court fondu, joueur figé pendant la transition. */
+  private teleportPlayer(x: number, y: number, fade = true): void {
+    if (this.teleporting) return;
+    const go = () => {
+      this.player.teleport(x, y);
+      this.player.body.setVelocity(0, 0);
+      this.camRig.snap(this.camTarget(), this.player.facing);
+      this.controls.consumeJump();
+    };
+    if (!fade) { go(); return; }
+    this.teleporting = true;
+    this.player.frozen = true;
+    const cam = this.cameras.main;
+    cam.fadeOut(170, 12, 8, 24);
+    cam.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      go();
+      cam.fadeIn(220, 12, 8, 24);
+      this.player.frozen = false;
+      this.teleporting = false;
+    });
   }
 
   private win(): void {
@@ -310,6 +352,7 @@ export class GameScene extends Phaser.Scene {
     this.emitters.petals.explode(24, p.x, p.y - 40);
     const id = this.level.id;
     const newRecord = Save.completeLevel(id, this.elapsed, this.deaths);
+    if (this.level.bonus) Save.setFlag('h1-reward');
     this.time.delayedCall(900, () => {
       this.tweens.add({ targets: p.rigContainer, alpha: 0, scale: 0.6, duration: 380 });
       Bus.emit(EV.victory, {
@@ -384,6 +427,8 @@ export class GameScene extends Phaser.Scene {
     Bus.off(EV.nextLevel, this.onNext, this);
     this.traps.forEach((t) => t.destroy());
     this.logs.forEach((l) => l.destroy());
+    this.script?.destroy();
+    this.ambience?.destroy();
     this.checkpoints.forEach((c) => c.destroy());
     this.door?.destroy();
     this.player?.destroy();
@@ -443,6 +488,9 @@ export class GameScene extends Phaser.Scene {
         this.add.image(t.x - 8, t.top - GRASS_PAD, key).setOrigin(0).setDepth(DEPTH.terrain);
         const roots = ensureCanvas(this, `roots-${L.id}-${i}`, () => paintCeiling(t.w, 8, i * 7));
         this.add.image(t.x, t.top + h - 8, roots).setOrigin(0).setDepth(DEPTH.terrain + 1);
+      } else if (L.theme === 'manor') {
+        const key = ensureCanvas(this, `mt-${L.id}-${i}`, () => paintManorTerrain(style, t.w, h, i * 97 + 3));
+        this.add.image(t.x - 8, t.top - GRASS_PAD, key).setOrigin(0).setDepth(DEPTH.terrain);
       } else {
         const key = ensureCanvas(this, `bed-${L.id}-${i}`, () => paintBed(t.w, h, i * 97 + 3));
         this.add.image(t.x - 8, t.top - GRASS_PAD, key).setOrigin(0).setDepth(DEPTH.terrain);
@@ -458,7 +506,7 @@ export class GameScene extends Phaser.Scene {
     const L = this.level;
     L.thorns.forEach((t, i) => {
       const h = L.height - t.top + 10;
-      const key = ensureCanvas(this, `thorns-${L.id}-${i}`, () => paintThorns(t.w + 20, h, i * 53 + 9));
+      const key = ensureCanvas(this, `thorns-${L.id}-${i}`, () => L.theme === 'manor' ? paintSpikes(t.w + 20, h, i * 53 + 9) : paintThorns(t.w + 20, h, i * 53 + 9));
       this.add.image(t.x - 10, t.top, key).setOrigin(0).setDepth(DEPTH.terrain - 2);
       this.thornRects.push(new Phaser.Geom.Rectangle(t.x, t.top + 22, t.w, h));
     });

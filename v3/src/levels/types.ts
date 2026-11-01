@@ -1,4 +1,7 @@
+import type Phaser from 'phaser';
 import type { FlowerDef } from '../traps/Sneezer';
+import type { Trap, TrapContext } from '../traps/Trap';
+import type { Player } from '../player/Player';
 import type { Difficulty } from '../core/Save';
 
 /** Élément réservé à une difficulté (absent sinon). */
@@ -12,7 +15,8 @@ export interface TerrainDef {
   top: number;
   w: number;
   h?: number;          // par défaut : jusqu'au bas du monde
-  style?: 'bed' | 'hedge' | 'ceiling';
+  /** 'stone' (pavés extérieurs), 'floor' (parquet), 'wall' (maçonnerie) : thème manoir. */
+  style?: 'bed' | 'hedge' | 'ceiling' | 'stone' | 'floor' | 'wall';
 }
 
 export interface StoneDef extends OnlyIn {
@@ -69,8 +73,36 @@ export interface HintDef extends OnlyIn {
   solvedAboveY?: number;                         // … ou au-dessus de cette hauteur
 }
 
+/** Ce que la scène de jeu met à disposition d'un script de niveau (niveaux scénarisés). */
+export interface LevelScriptHost {
+  scene: Phaser.Scene;
+  ctx: TrapContext;
+  player: Player;
+  level: LevelData;
+  /** Éclairage du thème (manoir), si présent. */
+  ambience?: unknown;
+  /** Téléporte le joueur (fondu court si fade), recale la caméra. */
+  teleport(x: number, y: number, fade?: boolean): void;
+}
+
+/** Script de niveau : mécanismes et événements propres à un niveau. */
+export interface LevelScript {
+  traps: Trap[];
+  /** Corps statiques ou mobiles avec lesquels le joueur entre en collision. */
+  solids: Phaser.GameObjects.GameObject[];
+  update(dt: number): void;
+  /** Appelé après chaque réapparition (les pièges ont déjà été remis à zéro). */
+  onRespawn(): void;
+  destroy(): void;
+}
+
 export interface LevelData {
   id: string;
+  /** Thème visuel et sonore (par défaut : la serre). */
+  theme?: 'greenhouse' | 'manor';
+  /** Niveau bonus, hors des 40 niveaux principaux. */
+  bonus?: boolean;
+  script?: (host: LevelScriptHost) => LevelScript;
   chapter: number;
   index: number;
   name: string;

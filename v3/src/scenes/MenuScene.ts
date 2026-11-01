@@ -5,7 +5,9 @@ import { Audio } from '../core/Audio';
 import { Save } from '../core/Save';
 import { Button, ButtonList } from '../ui/Button';
 import { paintChapter1, ensureCanvas } from '../art/textures';
-import { CHAPTERS, LEVELS, LEVEL_ORDER } from '../levels';
+import { CHAPTERS, LEVELS, LEVEL_ORDER, BONUS_LEVELS } from '../levels';
+import { paintManorCard, paintPumpkin, paintWitchHat, paintCandy } from '../halloween/art';
+import { drawCarvedFace } from '../halloween/ManorBackdrop';
 import { PadReader } from '../core/Pad';
 import { MenuBackdrop, MENU_GROUND } from '../menu/MenuBackdrop';
 import { MenuStage } from '../menu/MenuStage';
@@ -160,6 +162,7 @@ export class MenuScene extends Phaser.Scene {
     const anyDone = LEVEL_ORDER.some((id) => Save.completedAny(id));
     this.nav = new MenuNav(this, 112, 352, 56, [
       { label: anyDone ? 'Continuer' : 'Jouer', primary: true, action: () => this.startLevel(firstOpen.id) },
+      { label: 'Manoir hanté', action: () => this.startLevel('H-1') },
       { label: 'Chapitres', action: () => this.openChapters() },
       { label: 'Options', action: () => this.openOptions() },
       { label: 'Crédits', action: () => this.openCredits() }
@@ -167,6 +170,7 @@ export class MenuScene extends Phaser.Scene {
     this.nav.onFocus = () => this.stage.lookAtMenu();
     this.nav.focusFirst();
     const rows = this.nav.rows;
+    this.decorateBonusRow(rows[1]);
     if (this.quick) {
       this.nav.setEnabled(true);
     } else {
@@ -177,6 +181,24 @@ export class MenuScene extends Phaser.Scene {
       });
       this.time.delayedCall(760 + rows.length * 80 + 200, () => { if (!this.panel && !this.leaving) this.nav.setEnabled(true); });
     }
+  }
+
+  /** Entrée « Manoir hanté » : citrouille-lanterne lumineuse et étiquette « Bonus Halloween ». */
+  private decorateBonusRow(row: Phaser.GameObjects.Container): void {
+    const text = row.list.find((o) => o instanceof Phaser.GameObjects.Text) as Phaser.GameObjects.Text | undefined;
+    if (!text) return;
+    text.setColor('#7a3a9a');
+    const x = text.width + 34;
+    const glow = this.add.image(x, -2, 'dot-warm').setScale(2.2).setTint(0xffa040).setAlpha(0.55).setBlendMode(Phaser.BlendModes.ADD);
+    const pk = this.add.image(x, 14, ensureCanvas(this, 'mn-pkb-16', () => paintPumpkin(16, 48))).setOrigin(0.5, 1);
+    const face = this.add.graphics();
+    drawCarvedFace(face, x, -6, 16, 'grin');
+    const tag = this.add.text(x + 26, 0, 'BONUS HALLOWEEN', {
+      fontFamily: FONTS.ui, fontSize: '12px', fontStyle: '600', color: '#fff4e0', backgroundColor: '#c4561c', padding: { x: 7, y: 3 }
+    }).setOrigin(0, 0.5).setLetterSpacing(1);
+    row.add([glow, pk, face, tag]);
+    this.tweens.add({ targets: [pk, face], y: '-=3', duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: glow, alpha: 0.3, duration: 700, yoyo: true, repeat: -1 });
   }
 
   private buildPadHint(): void {
@@ -256,7 +278,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openChapters(): void {
-    const inner = this.openPanel('Chapitres', 1150, 540);
+    const inner = this.openPanel('Chapitres', 1150, 690);
+    inner.list.forEach((o) => { if (o instanceof Phaser.GameObjects.Text) o.y += 6; });
     const buttons: Button[] = [];
     const cardW = ART_W, cardH = 330, top = -168;
     CHAPTERS.forEach((ch, i) => {
@@ -334,11 +357,52 @@ export class MenuScene extends Phaser.Scene {
         buttons.push(b);
       }
     });
-    const back = new Button(this, 0, 222, 'Retour', () => this.closePanel(), { width: 160, height: 44, fontSize: 19 });
+    buttons.push(this.halloweenCard(inner, 0, 228));
+    const back = new Button(this, 0, 318, 'Retour', () => this.closePanel(), { width: 160, height: 44, fontSize: 19 });
     inner.add(back);
     buttons.push(back);
     this.panelList = new ButtonList(this, buttons, () => this.closePanel());
     this.panelList.focusFirst();
+  }
+
+  /** Carte du niveau bonus (indépendant des chapitres, toujours accessible). */
+  private halloweenCard(inner: Phaser.GameObjects.Container, cx: number, cy: number): Button {
+    const meta = BONUS_LEVELS[0];
+    const w = 1070, h = 112, left = cx - w / 2, top = cy - h / 2;
+    const g = this.add.graphics();
+    g.fillStyle(0x08060f, 0.4);
+    g.fillRoundedRect(left + 3, top + 6, w, h, 18);
+    g.fillStyle(0x1e1636, 1);
+    g.fillRoundedRect(left, top, w, h, 18);
+    g.lineStyle(1.5, 0xf28c38, 0.75);
+    g.strokeRoundedRect(left, top, w, h, 18);
+    const art = this.add.image(left + 8, top + 8, ensureCanvas(this, 'mn-card-art', () => paintManorCard(170, 96))).setOrigin(0);
+    const glow = this.add.graphics();
+    glow.lineStyle(3, 0xf28c38, 1);
+    glow.strokeRoundedRect(left - 1, top - 1, w + 2, h + 2, 19);
+    glow.setAlpha(0.2);
+    this.tweens.add({ targets: glow, alpha: 0.6, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const tx = left + 196;
+    const tag = this.add.text(tx, top + 16, 'BONUS HALLOWEEN', { fontFamily: FONTS.ui, fontSize: '12px', fontStyle: '600', color: '#f7b08a' }).setLetterSpacing(1.5);
+    const name = this.add.text(tx, top + 34, meta.name, { fontFamily: FONTS.ui, fontSize: '22px', fontStyle: '600', color: '#fff4e0' });
+    const d = Save.difficulty;
+    const rec = Save.level(meta.id);
+    const done = Save.completedAny(meta.id);
+    const T = TUNING[d];
+    const stats = [
+      done ? 'Manoir traversé ✓' : 'Pas encore traversé',
+      `Record (${T.label}) : ${rec.bestTimeMs !== null ? formatTime(rec.bestTimeMs) : '—'}`,
+      `Morts (${T.label}) : ${Save.levelDeathCount(meta.id)}`
+    ].join('   ·   ');
+    const st = this.add.text(tx, top + 72, stats, { fontFamily: FONTS.ui, fontSize: '15px', color: '#cfc3e8' });
+    inner.add([g, art, glow, tag, name, st]);
+    // récompenses obtenues
+    const rx = left + w - 250;
+    if (Save.flag('h1-reward')) inner.add(this.add.image(rx, top + 30, ensureCanvas(this, 'mn-hat-32', () => paintWitchHat(18))).setScale(1.2));
+    if (Save.flag('h1-candy')) inner.add(this.add.image(rx + 46, top + 32, ensureCanvas(this, 'mn-candy', () => paintCandy(16))).setScale(0.9));
+    const b = new Button(this, left + w - 110, cy, 'Entrer', () => this.startLevel(meta.id), { primary: true, width: 160, height: 46, fontSize: 19 });
+    inner.add(b);
+    return b;
   }
 
   private openLevels(chapter: number): void {

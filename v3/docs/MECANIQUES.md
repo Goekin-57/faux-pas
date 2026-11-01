@@ -128,3 +128,28 @@ Changer de difficulté en cours de niveau demande confirmation et recommence le 
 
 Un seul point de contrôle par niveau en Facile, et seulement s'il évite de refaire une longue partie déjà maîtrisée
 (1-1 : au milieu, avant la haie ; 1-2 : en haut de la corniche, avant le duel). Aucun en Expert.
+
+## Bonus Halloween — « Le Manoir des Trouillards » (H-1)
+
+Niveau indépendant des 40 niveaux (accessible depuis l'accueil : « Manoir hanté », et depuis Chapitres).
+Fil rouge : le manoir veut faire peur… mais ses occupants sont maladroits et leurs pièges se retournent contre eux.
+Durée maîtrisée visée : 5 à 7 minutes. Point de contrôle unique en Facile (salle sûre après la galerie), aucun en Expert.
+
+| Zone | Situation | Déclencheur → réaction | Facile / Expert |
+|---|---|---|---|
+| 1. Cour | Citrouille curieuse | dos tourné → elle roule vers toi ; tu te retournes → elle se fige ; rattrapé → « Bouh ! » (jamais mortel) | 82 / 125 px/s |
+| | Citrouille roulante | approche → tremble, dégringole du muret, roule (mortelle) → rebondit sur la pierre → se cale au pied du muret : la marche qui manquait | Expert : accélère si on saute trop tôt |
+| | Gardienne | perron → cri ridicule, chute sur la dalle → la porte s'ouvre | — |
+| 2. Grand hall | Fantôme portier | approche → opaque et SOLIDE (on saute dessus vers le balcon) → « Bouh » (recul) | solide 1,7 s / 0,9 s |
+| | Lustre maladroit | un fantôme fonce sur toi, percute le lustre → balancier qui frôle les deux bords | — |
+| | Escalier farceur | monter en courant → une marche descend, une monte, une se décale (annoncé, chute sans conséquence) | Expert : réagit aussi à l'hésitation |
+| 3. Galerie | Portrait observateur | ses yeux te suivent puis fixent la latte fissurée (petite fosse, jamais mortelle) | regard 3,2 s / 1,2 s |
+| | Tableau menteur | approche / arrêt devant lui → la peinture se corrige, les vraies plateformes s'illuminent | 3,6 s / 1,6 s (relançable) |
+| | Bibliothèque vivante | un livre actionne l'étagère-ascenseur ; le grimoire qui tente de tomber sur toi bloque la manivelle → ascenseur à la demande | cycles plus courts |
+| 4. Ombres | Plateformes d'ombre | solides seulement hors de la lumière (bougie à cycle, lanterne qui saute de plateforme en plateforme) | fenêtres 1,2 s / 0,85 s |
+| | Toile d'araignée | on tombe dedans → rebond ; l'araignée descend pour faire sursauter (la toucher repousse) | — |
+| 5. Couloir interdit | Le monstre qui a peur de toi | menace (pas, silhouette) → il te voit, hurle, s'enfuit : table → plateforme, lustre → pont, statue qui pivote, levier de la grille, armoire minuscule. Lui foncer dessus → il se cache trop tôt : contourner par le balcon (ou revenir calmement) | Expert : détecte de plus loin, même les approches en sautant |
+| 6. Antichambre | Trois portes (rester immobile devant) | A « SORTIE » trop accueillante → surprise ratée d'un fantôme, retour ; B bougies qui s'éteignent → plancher instable + bonbon secret ; C griffures → salle de bal | planches 0,35 s / 0,22 s |
+| 7. Salle de bal | Roi Citrouille | P1 : faire frapper la dalle fissurée → mécanisme → plus de ronces. P2 : noir, plateformes d'ombre, regard balayant annoncé → levier → lustre → plus de couronne. P3 : bonds paniqués (impact affiché) → l'attirer sur l'estrade : le rideau tombe, la tête roule et ouvre la sortie | annonces longues / enchaînements et attaques combinées |
+
+Sauvegarde : records et morts par difficulté, `h1-reward` (chapeau de sorcière, gardé pour la future personnalisation), `h1-candy`.

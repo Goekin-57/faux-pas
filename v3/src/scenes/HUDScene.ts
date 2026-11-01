@@ -10,6 +10,8 @@ import { Button, ButtonList } from '../ui/Button';
 import { Tutorial } from '../ui/Tutorial';
 import { levelMeta, nextLevel } from '../levels';
 import { TUNING } from '../core/Difficulty';
+import { ensureCanvas } from '../art/textures';
+import { paintWitchHat } from '../halloween/art';
 
 /** Interface en jeu : discrète, jamais par-dessus les plateformes. */
 export class HUDScene extends Phaser.Scene {
@@ -189,6 +191,7 @@ export class HUDScene extends Phaser.Scene {
   private showVictory(v: VictoryStats): void {
     this.close();
     const meta = levelMeta(v.levelId);
+    if (meta && meta.chapter === 0) { this.showBonusVictory(v); return; }
     const next = nextLevel(v.levelId);
     const { add } = this.panel('Serre traversée !', 440, meta?.name);
 
@@ -219,6 +222,52 @@ export class HUDScene extends Phaser.Scene {
     add(buttons);
     this.list = new ButtonList(this, buttons);
     this.list.focusFirst();
+  }
+
+  /** Victoire du niveau bonus : écran Halloween (chauves-souris, citrouilles, récompense). */
+  private showBonusVictory(v: VictoryStats): void {
+    const meta = levelMeta(v.levelId);
+    const { add, panel } = this.panel('Manoir traversé !', 480, meta?.name);
+    const row = (y: number, icon: string, label: string, value: string, highlight = false) => {
+      const i = this.add.image(-150, y, icon).setScale(0.62);
+      const l = this.add.text(-124, y, label, { fontFamily: FONTS.ui, fontSize: '20px', color: '#cfe3dc' }).setOrigin(0, 0.5);
+      const val = this.add.text(160, y, value, { fontFamily: FONTS.ui, fontSize: '22px', fontStyle: '600', color: highlight ? '#f7d774' : '#fff8e6' }).setOrigin(1, 0.5);
+      add([i, l, val]);
+    };
+    row(-86, 'icon-wilt', 'Morts', String(v.deaths));
+    row(-48, 'icon-clock', 'Temps', formatTime(v.timeMs), v.newRecord);
+    if (v.newRecord) {
+      const badge = this.add.text(0, -14, 'Nouveau record', { fontFamily: FONTS.ui, fontSize: '16px', fontStyle: '600', color: '#1c2b4f', backgroundColor: '#f7d774', padding: { x: 10, y: 3 } }).setOrigin(0.5);
+      add([badge]);
+    }
+    // récompense cosmétique (conservée dans la sauvegarde pour la future personnalisation)
+    const hat = this.add.image(-120, 26, ensureCanvas(this, 'mn-hat-32', () => paintWitchHat(18))).setScale(1.3);
+    const rw = this.add.text(-92, 28, 'Chapeau de sorcière débloqué', { fontFamily: FONTS.ui, fontSize: '17px', fontStyle: '600', color: '#f7b08a' }).setOrigin(0, 0.5);
+    const candy = this.add.text(0, 60, Save.flag('h1-candy') ? 'Bonbon secret : trouvé ✓' : 'Bonbon secret : une porte le cache…', { fontFamily: FONTS.ui, fontSize: '15px', color: '#cfc3e8' }).setOrigin(0.5);
+    add([rw, candy, hat]);
+    this.tweens.add({ targets: hat, angle: { from: -10, to: 10 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    const buttons = [
+      new Button(this, 0, 118, 'Menu principal', () => { this.close(); Bus.emit(EV.quit); }, { primary: true, width: 280 }),
+      new Button(this, 0, 180, 'Rejouer', () => { this.close(); Bus.emit(EV.restart); }, { width: 200 })
+    ];
+    add(buttons);
+    this.list = new ButtonList(this, buttons);
+    this.list.focusFirst();
+    // animation exclusive : un vol de chauves-souris traverse l'écran, des citrouilles sautillent
+    if (this.textures.exists('mn-bat')) {
+      for (let i = 0; i < 9; i++) {
+        const b = this.add.image(-60 - i * 70, 120 + (i % 3) * 60, 'mn-bat').setScale(0.9 + (i % 2) * 0.4);
+        this.tweens.add({ targets: b, scaleY: b.scaleY * 0.35, duration: 100, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: b, x: GAME_W + 120, y: b.y - 60 + (i % 2) * 120, duration: 2600 + i * 140, delay: 200 + i * 90, ease: 'Sine.easeInOut', onComplete: () => b.destroy() });
+      }
+    }
+    if (this.textures.exists('mn-pkb-26')) {
+      for (const [x, d] of [[-250, 0], [250, 200]] as const) {
+        const pk = this.add.image(x, 214, 'mn-pkb-26').setOrigin(0.5, 1);
+        panel.add(pk);
+        this.tweens.add({ targets: pk, y: 196, duration: 300, yoyo: true, repeat: -1, delay: d, ease: 'Quad.easeOut' });
+      }
+    }
   }
 
   // ------------------------------------------------------------ panneau générique

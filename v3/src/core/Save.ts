@@ -27,6 +27,8 @@ export interface SaveData {
   levelsExpert: Record<string, LevelRecord>;
   totalDeaths: number;
   deathsByDifficulty: Record<Difficulty, number>;
+  /** Morts cumulées par niveau et par difficulté (clé « easy:H-1 »). */
+  levelDeaths: Record<string, number>;
   settings: Settings;
   flags: Record<string, boolean>; // ex. tutoriel déjà vu
 }
@@ -40,6 +42,7 @@ function defaults(): SaveData {
     levelsExpert: {},
     totalDeaths: 0,
     deathsByDifficulty: { easy: 0, expert: 0 },
+    levelDeaths: {},
     settings: { music: 0.55, sfx: 0.8, muted: false, touchControls: 'auto', quality: 'auto', difficulty: null },
     flags: {}
   };
@@ -61,6 +64,7 @@ class SaveStore {
           levels: { ...(parsed.levels ?? {}) },
           levelsExpert: { ...(parsed.levelsExpert ?? {}) },
           deathsByDifficulty: { ...d.deathsByDifficulty, ...(parsed.deathsByDifficulty ?? {}) },
+          levelDeaths: { ...(parsed.levelDeaths ?? {}) },
           flags: { ...(parsed.flags ?? {}) }
         } as SaveData;
         // Migration (sauvegardes d'avant les modes) : un joueur qui a déjà joué garde sa progression
@@ -124,10 +128,19 @@ class SaveStore {
     return this.data.deathsByDifficulty[d] ?? 0;
   }
 
-  addDeath(): void {
+  addDeath(levelId?: string): void {
     this.data.totalDeaths++;
     this.data.deathsByDifficulty[this.difficulty] = this.deaths() + 1;
+    if (levelId) {
+      const k = `${this.difficulty}:${levelId}`;
+      this.data.levelDeaths[k] = (this.data.levelDeaths[k] ?? 0) + 1;
+    }
     this.persist();
+  }
+
+  /** Morts cumulées sur un niveau dans une difficulté. */
+  levelDeathCount(levelId: string, d: Difficulty = this.difficulty): number {
+    return this.data.levelDeaths[`${d}:${levelId}`] ?? 0;
   }
 
   /** Retourne true si le temps est un nouveau record (dans la difficulté en cours). */
