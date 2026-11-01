@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <title>NOT SO FAST!</title>
+  <meta name="theme-color" content="#1d1a39">
+  <style>
+    html, body { margin: 0; height: 100%; background: #1d1a39; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+    #game { position: fixed; inset: 0; display: grid; place-items: center; }
+    #game canvas { display: block; }
+    #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #ffd23f; font: 700 18px system-ui, sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="boot">Chargement…</div>
+  <div id="game"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

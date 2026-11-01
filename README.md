@@ -6,6 +6,10 @@ Jeu de plateforme « troll » pour navigateur : le sol ment, les panneaux menten
 - 41 niveaux en 5 chapitres + un niveau spécial Halloween, 3 cœurs, boss à phases.
 - Clavier, tactile et manette (Xbox / PlayStation).
 
+## Version 2 (Phaser 4) — en cours
+
+Refonte complète dans `v2/` (code TypeScript) et `jeu-v2/` (jeu compilé, jouable sur GitHub Pages). Détails et état d'avancement : [v2/README.md](v2/README.md).
+
 ## Fichiers
 
 - `index.html` : le jeu complet (un seul fichier, HTML + JavaScript, dessin sur canvas).
