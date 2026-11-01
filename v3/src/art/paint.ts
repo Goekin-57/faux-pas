@@ -1,6 +1,8 @@
 // Peintres procéduraux (Canvas 2D) : décors illustrés, terrains, pièges.
 // Tout est généré à partir de graines fixes : le rendu est identique à chaque partie.
 
+import { DISPLAY, type HiDpiCanvas } from '../core/Display';
+
 export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -12,11 +14,21 @@ export function rng(seed: number): () => number {
   };
 }
 
-export function canvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
-  const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.ceil(w));
-  c.height = Math.max(1, Math.ceil(h));
+/**
+ * Crée un canevas de peinture. Les dimensions sont en unités du monde ; le canevas réel est
+ * `res` fois plus grand et le contexte est mis à l'échelle : les peintres dessinent en unités
+ * du monde et obtiennent automatiquement des textures haute résolution (voir core/Display).
+ */
+export function canvas(w: number, h: number, res: number = DISPLAY.TEX): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const c = document.createElement('canvas') as HiDpiCanvas;
+  const lw = Math.max(1, Math.ceil(w));
+  const lh = Math.max(1, Math.ceil(h));
+  c.width = Math.max(1, Math.round(lw * res));
+  c.height = Math.max(1, Math.round(lh * res));
+  c.__lw = lw;
+  c.__lh = lh;
   const ctx = c.getContext('2d')!;
+  ctx.scale(c.width / lw, c.height / lh);
   return [c, ctx];
 }
 
@@ -497,6 +509,40 @@ export function paintCeiling(w: number, h: number, seed: number): HTMLCanvasElem
 }
 
 /** Haie taillée, très haute (infranchissable par le haut). */
+/** Pavé-ascenseur : poli, mais avec une plaque de laiton gravée d'un sablier et d'une flèche vers le bas. */
+export function paintStoneLift(): HTMLCanvasElement {
+  const base = paintStonePolished();
+  const W = STONE_W + 8, H = STONE_H + 12;
+  const [c, ctx] = canvas(W, H);
+  ctx.drawImage(base, 0, 0, W, H);
+  ctx.translate(4, 6);
+  const cx = STONE_W / 2, cy = STONE_H / 2;
+  // plaque de laiton
+  const g = ctx.createLinearGradient(0, cy - 10, 0, cy + 10);
+  g.addColorStop(0, '#ffe7a3');
+  g.addColorStop(0.5, '#e2b65a');
+  g.addColorStop(1, '#b8862f');
+  ctx.fillStyle = g;
+  roundRect(ctx, cx - 26, cy - 10, 52, 20, 5);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(120,80,20,0.8)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // rivets
+  ctx.fillStyle = '#8a6020';
+  for (const dx of [-21, 21]) { ctx.beginPath(); ctx.arc(cx + dx, cy, 1.6, 0, Math.PI * 2); ctx.fill(); }
+  // chevrons vers le bas (gravés)
+  ctx.strokeStyle = 'rgba(95,60,15,0.9)';
+  ctx.lineWidth = 1.8;
+  ctx.lineCap = 'round';
+  for (const dy of [-4, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, cy + dy - 2); ctx.lineTo(cx + 9, cy + dy + 2); ctx.lineTo(cx + 13, cy + dy - 2);
+    ctx.stroke();
+  }
+  return c;
+}
+
 export function paintHedge(w: number, h: number, seed: number): HTMLCanvasElement {
   const [c, ctx] = canvas(w + 20, h);
   const r = rng(seed);

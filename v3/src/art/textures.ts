@@ -2,9 +2,10 @@ import type Phaser from 'phaser';
 import { SVG_ASSETS } from './svg';
 import {
   canvas, rng, paintSky, paintGreenhouse, paintFoliage, paintRay, paintVignette,
-  paintSoftDot, paintPetal, paintStar, paintStoneMatte, paintStonePolished
+  paintSoftDot, paintPetal, paintStar, paintStoneMatte, paintStonePolished, paintStoneLift
 } from './paint';
 import { GAME_W, GAME_H } from '../core/constants';
+import { addHiDpiCanvas } from '../core/Display';
 
 /** Rasterise les SVG à haute résolution et les enregistre comme textures Phaser. */
 export async function loadSvgTextures(scene: Phaser.Scene): Promise<void> {
@@ -17,13 +18,13 @@ export async function loadSvgTextures(scene: Phaser.Scene): Promise<void> {
           img.onload = () => {
             const [c, ctx] = canvas(a.w, a.h);
             ctx.drawImage(img, 0, 0, a.w, a.h);
-            scene.textures.addCanvas(a.key, c);
+            addHiDpiCanvas(scene, a.key, c);
             resolve();
           };
           img.onerror = () => {
             console.warn('SVG invalide :', a.key);
             const [c] = canvas(a.w, a.h);
-            scene.textures.addCanvas(a.key, c);
+            addHiDpiCanvas(scene, a.key, c);
             resolve();
           };
           img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(a.svg);
@@ -33,7 +34,7 @@ export async function loadSvgTextures(scene: Phaser.Scene): Promise<void> {
 }
 
 export function ensureCanvas(scene: Phaser.Scene, key: string, painter: () => HTMLCanvasElement): string {
-  if (!scene.textures.exists(key)) scene.textures.addCanvas(key, painter());
+  if (!scene.textures.exists(key)) addHiDpiCanvas(scene, key, painter());
   return key;
 }
 
@@ -51,6 +52,7 @@ export function paintChapter1(scene: Phaser.Scene): void {
   ensureCanvas(scene, 'petal', paintPetal);
   ensureCanvas(scene, 'star', paintStar);
   ensureCanvas(scene, 'stone-polished', paintStonePolished);
+  ensureCanvas(scene, 'stone-lift', paintStoneLift);
   for (let i = 0; i < 4; i++) ensureCanvas(scene, `stone-matte-${i}`, () => paintStoneMatte(100 + i * 17));
   ensureCanvas(scene, 'dust', () => {
     const [c, ctx] = canvas(24, 24);

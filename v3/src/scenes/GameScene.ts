@@ -1,13 +1,16 @@
 import Phaser from 'phaser';
+import { fitCamera } from '../core/Display';
 import { DEPTH, GAME_W, PHYSICS } from '../core/constants';
 import { Controls, touchState } from '../core/Controls';
 import { CameraRig, type CameraTarget } from '../core/CameraRig';
+import { HintSystem } from '../ui/HintBubble';
 import { Audio, type SfxName } from '../core/Audio';
 import { Save } from '../core/Save';
 import { Bus, EV } from '../core/Bus';
 import { Player } from '../player/Player';
 import { ShyStone } from '../traps/ShyStone';
 import { Snapper } from '../traps/Snapper';
+import { Sneezer } from '../traps/Sneezer';
 import { Checkpoint } from '../traps/Checkpoint';
 import { ExitDoor } from '../traps/ExitDoor';
 import type { DeathKind, Trap, TrapContext } from '../traps/Trap';
@@ -26,6 +29,7 @@ export class GameScene extends Phaser.Scene {
   private controls!: Controls;
   private stones: ShyStone[] = [];
   private snappers: Snapper[] = [];
+  private flowers: Sneezer[] = [];
   private traps: Trap[] = [];
   private checkpoints: Checkpoint[] = [];
   private door!: ExitDoor;
@@ -37,6 +41,9 @@ export class GameScene extends Phaser.Scene {
   private elapsed = 0;
   private finished = false;
   private camRig!: CameraRig;
+  private hints: HintSystem | null = null;
+  private hedges: Phaser.GameObjects.Image[] = [];
+  private rustleT = 0;
   private statsTimer = 0;
 
   constructor() {
@@ -48,15 +55,19 @@ export class GameScene extends Phaser.Scene {
     this.level = (meta?.data ?? levelMeta('1-1')!.data!)();
     this.stones = [];
     this.snappers = [];
+    this.flowers = [];
     this.traps = [];
     this.checkpoints = [];
     this.thornRects = [];
+    this.hedges = [];
+    this.rustleT = 0;
     this.deaths = 0;
     this.elapsed = 0;
     this.finished = false;
   }
 
   create(): void {
+    fitCamera(this);
     const L = this.level;
     paintChapter1(this);
     this.physics.world.setBounds(0, -400, L.width, L.height + 600);
@@ -95,13 +106,23 @@ export class GameScene extends Phaser.Scene {
       this.snappers.push(sn);
       this.traps.push(sn);
     });
+    (L.flowers ?? []).forEach((f, i) => {
+      const fl = new Sneezer(this, f, i);
+      this.flowers.push(fl);
+      this.traps.push(fl);
+    });
     L.checkpoints.forEach((c) => this.checkpoints.push(new Checkpoint(this, c.x, c.groundY)));
-    this.door = new ExitDoor(this, L.exit.x, L.exit.groundY, L.exit.scootTo, () => this.win());
+    this.door = new ExitDoor(this, L.exit.x, L.exit.groundY, L.exit.scootTo, () => this.win(), L.exit.gag ?? 'scoot');
     this.buildDecor('front');
 
     // collisions
     this.physics.add.collider(this.player.zone, terrain);
     this.physics.add.collider(this.player.zone, this.stones.map((s) => s.zone));
+    if (this.flowers.length) {
+      this.physics.add.collider(this.player.zone, this.flowers.map((f) => f.potZone));
+      const heads = this.flowers.filter((f) => f.headZone).map((f) => f.headZone!);
+      if (heads.length) this.physics.add.collider(this.player.zone, heads);
+    }
 
     // événements du joueur → sons + particules
     this.player.onJump = () => {
@@ -116,10 +137,11 @@ export class GameScene extends Phaser.Scene {
 
     // caméra
     const cam = this.cameras.main;
-    cam.setBounds(0, 0, L.width, L.height);
     this.camRig = new CameraRig(cam, L.width, L.height);
     this.camRig.snap(this.camTarget(), 1);
     cam.fadeIn(350, 20, 40, 36);
+
+    this.hints = this.level.hints?.length ? new HintSystem(this, this.level.hints, this.player) : null;
 
     // interface
     this.registry.set('levelInfo', { id: L.id, name: L.name });
@@ -136,7 +158,7 @@ export class GameScene extends Phaser.Scene {
     Audio.duckMusic(0);
 
     // points d'accès pour les tests automatisés
-    (window as unknown as { __nsf: unknown }).__nsf = { scene: this, player: this.player, touch: touchState };
+    (window as unknown as { __nsf: unknown }).__nsf = { scene: this, player: this.player, touch: touchState, flowers: this.flowers };
   }
 
   // ------------------------------------------------------------- boucle
@@ -168,6 +190,9 @@ export class GameScene extends Phaser.Scene {
       this.elapsed += delta;
       this.checkHazards();
     }
+
+    this.hints?.update(dt);
+    this.updateHedges(dt);
 
     // caméra stable (amortie, calée sur le sol) ; figée pendant l'animation de mort
     if (this.player.alive) this.camRig.update(delta, this.camTarget());
@@ -268,7 +293,35 @@ export class GameScene extends Phaser.Scene {
     else this.onQuit();
   }
 
+  /**
+   * Les haies "vivent" quand le joueur est près d'elles : elles frémissent et laissent tomber
+   * des feuilles vers le bas (le regard suit les feuilles… jusqu'au puits et à l'ascenseur).
+   */
+  private updateHedges(dt: number): void {
+    if (!this.hedges.length || !this.player.alive) return;
+    this.rustleT -= dt;
+    if (this.rustleT > 0) return;
+    this.rustleT = 2.6;
+    for (const h of this.hedges) {
+      if (Math.abs(h.x - this.player.x) > 520) continue;
+      this.tweens.add({ targets: h, scaleX: 1.025, angle: { from: -0.8, to: 0.8 }, duration: 110, yoyo: true, repeat: 2, ease: 'Sine.easeInOut' });
+      const left = h.x - h.displayWidth / 2 + 6;
+      for (let i = 0; i < 3; i++) {
+        this.time.delayedCall(i * 140, () => this.dropLeaf(left - 8 + Math.random() * 20, h.y - h.displayHeight * (0.35 + Math.random() * 0.4)));
+      }
+    }
+  }
+
+  private dropLeaf(x: number, y: number): void {
+    const leaf = this.add.image(x, y, 'leaf').setScale(0.4).setDepth(DEPTH.fx).setAngle(Math.random() * 360);
+    this.tweens.add({
+      targets: leaf, y: y + 260 + Math.random() * 60, x: x - 30 + Math.random() * 40, angle: leaf.angle + 300,
+      alpha: { from: 1, to: 0 }, duration: 2200, ease: 'Sine.easeIn', onComplete: () => leaf.destroy()
+    });
+  }
+
   private cleanup(): void {
+    this.hints?.destroy();
     Bus.off(EV.resume, this.onResume, this);
     Bus.off(EV.restart, this.onRestart, this);
     Bus.off(EV.quit, this.onQuit, this);
@@ -325,7 +378,9 @@ export class GameScene extends Phaser.Scene {
       const style = t.style ?? 'bed';
       if (style === 'hedge') {
         const key = ensureCanvas(this, `hedge-${L.id}-${i}`, () => paintHedge(t.w, h, i * 31));
-        this.add.image(t.x - 10, t.top, key).setOrigin(0).setDepth(DEPTH.terrain + 4);
+        // origine en bas : la haie peut frémir depuis sa base
+        const img = this.add.image(t.x - 10 + (t.w + 20) / 2, t.top + h, key).setOrigin(0.5, 1).setDepth(DEPTH.terrain + 4);
+        this.hedges.push(img);
       } else if (style === 'ceiling') {
         const key = ensureCanvas(this, `ceil-${L.id}-${i}`, () => paintBed(t.w, h, i * 13));
         this.add.image(t.x - 8, t.top - GRASS_PAD, key).setOrigin(0).setDepth(DEPTH.terrain);

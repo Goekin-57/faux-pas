@@ -18,6 +18,7 @@ const RESPAWN = 2.2;
 const SINK_SPEED = 95;
 const RETURN_SPEED = 130;
 const RETURN_DELAY = 1.3;
+const LIFT_WAIT = 1.1;  // s d'immobilité sur l'ascenseur avant qu'il ne descende
 
 type State = 'idle' | 'warn' | 'falling' | 'gone' | 'regrow' | 'sinking' | 'held' | 'returning';
 
@@ -41,6 +42,12 @@ export class ShyStone implements Trap {
   private sparkleTimer = Math.random() * 3;
   private vacantFor = 0;
   private time = 0;
+  /** Pavé-ascenseur : progression du sablier (0 → 1) avant la descente. */
+  private sand = 0;
+  private lastTick = 0;
+  private glass?: Phaser.GameObjects.Graphics;
+  /** Vrai dès que l'ascenseur a été utilisé une fois (pour l'indice contextuel). */
+  used = false;
 
   constructor(private scene: Phaser.Scene, readonly cfg: StoneConfig, index: number) {
     this.id = `stone-${index}`;
@@ -55,12 +62,13 @@ export class ShyStone implements Trap {
       this.support = scene.add.graphics().setDepth(DEPTH.terrain - 1);
     }
     this.img = scene.add
-      .image(x, cy, kind === 'matte' ? `stone-matte-${index % 4}` : 'stone-polished')
+      .image(x, cy, kind === 'matte' ? `stone-matte-${index % 4}` : cfg.stopDepth ? 'stone-lift' : 'stone-polished')
       .setDepth(DEPTH.terrain + 1);
     if (kind === 'polished') {
       this.sparkle = scene.add.image(x, top + 6, 'star').setDepth(DEPTH.terrain + 2).setScale(0).setBlendMode(Phaser.BlendModes.ADD);
     }
 
+    if (cfg.stopDepth) this.glass = scene.add.graphics().setDepth(DEPTH.terrain + 2);
     this.zone = scene.add.zone(x, cy, STONE_W - 2, STONE_H);
     scene.physics.add.existing(this.zone);
     this.body = this.zone.body as Phaser.Physics.Arcade.Body;
@@ -94,6 +102,24 @@ export class ShyStone implements Trap {
     switch (this.state) {
       case 'idle':
         this.offset = Phaser.Math.Linear(this.offset, 0, Math.min(1, dt * 8));
+        if (this.cfg.stopDepth) {
+          // Ascenseur : PAS de tremblement (ce serait le signal "danger" appris juste avant).
+          // Le sablier de la plaque s'écoule tant qu'on reste immobile, se remplit si on bouge.
+          const still = standing && ctx.player.stillTime > 0.12;
+          this.sand = Phaser.Math.Clamp(this.sand + (still ? dt / LIFT_WAIT : -dt * 2.5), 0, 1);
+          if (still && this.sand - this.lastTick >= 0.25) {
+            this.lastTick = this.sand;
+            ctx.sfx('hourglass', this.cfg.x, this.sand);
+          }
+          if (!still && this.sand < this.lastTick) this.lastTick = Math.floor(this.sand * 4) / 4;
+          if (this.sand >= 1) {
+            this.enter('sinking');
+            this.used = true;
+            ctx.sfx('liftStart', this.cfg.x);
+            ctx.player.setExpression('grin', 900);
+          }
+          break;
+        }
         if (standing && ctx.player.stillTime > HESITATION) {
           this.enter('warn');
           ctx.sfx('tileWarn', this.cfg.x);
@@ -159,7 +185,7 @@ export class ShyStone implements Trap {
 
       case 'sinking':
         if (standing) this.vacantFor = 0; else this.vacantFor += dt;
-        this.offset = Math.min(this.cfg.stopDepth!, this.offset + SINK_SPEED * dt);
+        this.offset = Math.min(this.cfg.stopDepth!, this.offset + SINK_SPEED * Math.min(1, 0.25 + this.t * 1.5) * dt);
         if (this.offset >= this.cfg.stopDepth!) {
           this.enter('held');
           ctx.sfx('land', this.cfg.x, 0.5);
@@ -178,11 +204,13 @@ export class ShyStone implements Trap {
 
       case 'returning':
         this.offset = Math.max(0, this.offset - RETURN_SPEED * dt);
-        if (standing && ctx.player.stillTime > HESITATION) {
+        if (!this.cfg.stopDepth && standing && ctx.player.stillTime > HESITATION) {
           this.enter('warn');
           ctx.sfx('tileWarn', this.cfg.x);
         } else if (this.offset <= 0) {
           this.enter('idle');
+          this.sand = 0;
+          this.lastTick = 0;
         }
         break;
     }
@@ -239,9 +267,29 @@ export class ShyStone implements Trap {
     this.t = 0;
   }
 
+  private drawHourglass(): void {
+    const g = this.glass;
+    if (!g) return;
+    g.clear();
+    const x = this.cfg.x - 10, y = this.zone.y;
+    const k = this.state === 'idle' ? this.sand : 1;
+    // verre
+    g.lineStyle(1.6, 0x6b4a14, 0.95);
+    g.strokeTriangle(x - 6, y - 7, x + 6, y - 7, x, y);
+    g.strokeTriangle(x - 6, y + 7, x + 6, y + 7, x, y);
+    // sable du haut (diminue) et du bas (augmente)
+    g.fillStyle(0xfff1c9, 1);
+    const top = 1 - k;
+    if (top > 0.02) g.fillTriangle(x - 5 * top, y - 1 - 5 * top, x + 5 * top, y - 1 - 5 * top, x, y - 1);
+    if (k > 0.02) g.fillRect(x - 5 * k, y + 6 - 5 * k, 10 * k, 5 * k);
+    if (k > 0.02 && k < 1) g.fillRect(x - 0.6, y - 1, 1.2, 7);
+  }
+
   /** Tige végétale (pavés polis) : se courbe quand le pavé s'enfonce, se rompt quand il tombe. */
   private drawSupport(): void {
+    this.drawHourglass();
     if (!(this.support instanceof Phaser.GameObjects.Graphics)) return;
+    if (this.cfg.stopDepth) { this.drawSpring(this.support); return; }
     const g = this.support;
     g.clear();
     const x = this.cfg.x;
@@ -294,7 +342,44 @@ export class ShyStone implements Trap {
     }
   }
 
+  /** Ascenseur : vrille végétale en ressort (indice : "ça monte et ça descend"). */
+  private drawSpring(g: Phaser.GameObjects.Graphics): void {
+    g.clear();
+    const x = this.cfg.x, base = this.cfg.base;
+    const top = this.cfg.top + STONE_H + this.offset - 2;
+    const len = Math.max(6, base - top);
+    const coils = 7;
+    const amp = 14 - Math.min(8, this.offset / 30);
+    g.lineStyle(5, 0x5e9a70, 1);
+    g.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const t = i / 64;
+      const px = x + Math.sin(t * Math.PI * 2 * coils) * amp;
+      const py = top + t * len;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.strokePath();
+    g.lineStyle(2, 0xb6dc98, 0.8);
+    g.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const t = i / 64;
+      const px = x - 1 + Math.sin(t * Math.PI * 2 * coils) * amp;
+      const py = top + t * len - 1;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.strokePath();
+    g.fillStyle(0x86b97f, 1);
+    g.fillEllipse(x, top + 2, 34, 10);
+    // butées de laiton visibles en bas du puits : "ça s'arrête là"
+    const stopY = this.cfg.top + this.cfg.stopDepth! + STONE_H;
+    g.fillStyle(0xf7d774, 1);
+    g.fillRoundedRect(x - STONE_W / 2 - 12, stopY + 2, 14, 8, 3);
+    g.fillRoundedRect(x + STONE_W / 2 - 2, stopY + 2, 14, 8, 3);
+  }
+
   reset(): void {
+    this.sand = 0;
+    this.lastTick = 0;
     this.state = 'idle';
     this.t = 0;
     this.offset = 0;
@@ -310,6 +395,7 @@ export class ShyStone implements Trap {
     this.img.destroy();
     this.support.destroy();
     this.sparkle?.destroy();
+    this.glass?.destroy();
     this.zone.destroy();
   }
 }

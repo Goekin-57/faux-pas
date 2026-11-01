@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fitCamera } from '../core/Display';
 import { DEPTH, FONTS, GAME_W, GAME_H } from '../core/constants';
 import { Audio } from '../core/Audio';
 import { Save } from '../core/Save';
@@ -10,6 +11,7 @@ import { MenuBackdrop, MENU_GROUND } from '../menu/MenuBackdrop';
 import { MenuStage } from '../menu/MenuStage';
 import { MenuNav } from '../menu/MenuNav';
 import { paintLogoNotSo, paintLogoFast, LOGO_RES } from '../menu/paintMenu';
+import { CHAPTER_ART, ART_W, ART_H } from '../menu/chapterArt';
 
 /**
  * Écran d'accueil : diorama vivant de la serre.
@@ -41,6 +43,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    fitCamera(this);
     paintChapter1(this);
     this.backdrop = new MenuBackdrop(this);
     this.stage = new MenuStage(this, this.quick);
@@ -245,52 +248,85 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openChapters(): void {
-    const inner = this.openPanel('Chapitres', 1120, 520);
+    const inner = this.openPanel('Chapitres', 1150, 540);
     const buttons: Button[] = [];
-    const cardW = 196, cardH = 300;
+    const cardW = ART_W, cardH = 330, top = -168;
     CHAPTERS.forEach((ch, i) => {
-      const cx = -2 * (cardW + 18) + i * (cardW + 18);
+      const cx = -2 * (cardW + 20) + i * (cardW + 20);
+      const left = cx - cardW / 2;
       const levels = LEVELS.filter((l) => l.chapter === ch.n);
       const done = levels.filter((l) => Save.level(l.id).completed).length;
       const built = levels.some((l) => l.data);
-      const g = this.add.graphics();
-      g.fillStyle(0x0f2830, 1);
-      g.fillRoundedRect(cx - cardW / 2, -150, cardW, cardH, 18);
-      // bandeau aux couleurs du chapitre
-      ch.palette.forEach((c, k) => {
-        g.fillStyle(c, built ? 1 : 0.45);
-        g.fillRect(cx - cardW / 2 + k * (cardW / 4), -150, cardW / 4 + 1, 92);
-      });
-      g.fillStyle(0x0f2830, 1);
-      g.fillRect(cx - cardW / 2, -66, cardW, 10);
-      const num = this.add.text(cx - cardW / 2 + 16, -44, `Chapitre ${ch.n}`, { fontFamily: FONTS.ui, fontSize: '16px', color: '#9fc3b8' });
-      const name = this.add.text(cx - cardW / 2 + 16, -20, ch.name, {
-        fontFamily: FONTS.ui, fontSize: '21px', fontStyle: '600', color: '#fff6e0', wordWrap: { width: cardW - 30 }
-      });
-      // 8 pastilles de progression (le 8e = boss)
-      for (let k = 0; k < 8; k++) {
-        const lx = cx - cardW / 2 + 22 + k * 22;
-        const lv = levels[k];
-        const ok = Save.level(lv.id).completed;
-        g.fillStyle(ok ? 0xf7d774 : lv.data ? 0x7fd1c7 : 0x2f4a52, 1);
-        if (k === 7) g.fillRoundedRect(lx - 7, 46, 14, 14, 3);
-        else g.fillCircle(lx, 53, 6);
+      // un chapitre s'ouvre quand le boss du précédent est vaincu (le 1 est toujours ouvert)
+      const prevBoss = ch.n > 1 ? LEVELS.find((l) => l.chapter === ch.n - 1 && l.index === 8) : undefined;
+      const unlocked = ch.n === 1 || (!!prevBoss && Save.level(prevBoss.id).completed);
+      const open = unlocked && built;
+
+      const card = this.add.graphics();
+      card.fillStyle(0x08181c, 0.35);
+      card.fillRoundedRect(left + 3, top + 7, cardW, cardH, 18);
+      card.fillStyle(0x10272d, 1);
+      card.fillRoundedRect(left, top, cardW, cardH, 18);
+      card.lineStyle(1.5, open ? ch.palette[1] : 0x2f4a52, open ? 0.7 : 0.6);
+      card.strokeRoundedRect(left, top, cardW, cardH, 18);
+
+      // illustration du chapitre, cadrée pour la carte (jamais étirée)
+      const key = ensureCanvas(this, `chapter-art-${ch.n}`, CHAPTER_ART[i]);
+      const art = this.add.image(left, top, key).setOrigin(0);
+      const items: Phaser.GameObjects.GameObject[] = [card, art];
+      if (!open) {
+        const veil = this.add.graphics();
+        veil.fillStyle(0x0b1a1f, 0.55);
+        veil.fillRoundedRect(left, top, cardW, ART_H, { tl: 18, tr: 18, bl: 0, br: 0 });
+        veil.fillStyle(0x10272d, 0.92);
+        veil.fillCircle(cx, top + ART_H / 2, 24);
+        veil.lineStyle(1.5, 0xfff1c9, 0.35);
+        veil.strokeCircle(cx, top + ART_H / 2, 24);
+        items.push(veil, this.add.image(cx, top + ART_H / 2, 'icon-lock').setScale(0.62).setAlpha(0.9));
+      } else {
+        // le chapitre ouvert "respire" doucement (liseré lumineux)
+        const glow = this.add.graphics();
+        glow.lineStyle(3, ch.palette[1], 1);
+        glow.strokeRoundedRect(left - 1, top - 1, cardW + 2, cardH + 2, 19);
+        glow.setAlpha(0.15);
+        this.tweens.add({ targets: glow, alpha: 0.55, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        items.push(glow);
       }
-      const prog = this.add.text(cx - cardW / 2 + 16, 68, built ? `${done} / 8 terminés` : 'En construction', {
-        fontFamily: FONTS.ui, fontSize: '15px', color: built ? '#cfe3dc' : '#6f8f8a'
+
+      const tx = left + 16;
+      const num = this.add.text(tx, top + ART_H + 14, `CHAPITRE ${ch.n}`, {
+        fontFamily: FONTS.ui, fontSize: '13px', fontStyle: '600', color: open ? '#9fc3b8' : '#6f8f8a'
+      }).setLetterSpacing(1.5);
+      const name = this.add.text(tx, top + ART_H + 34, ch.name, {
+        fontFamily: FONTS.ui, fontSize: '19px', fontStyle: '600', color: open ? '#fff6e0' : '#b9c9c4',
+        wordWrap: { width: cardW - 30 }, lineSpacing: 2
       });
-      inner.add([g, num, name, prog]);
-      if (built) {
-        const b = new Button(this, cx, 118, 'Choisir', () => this.openLevels(ch.n), { primary: true, width: 150, height: 44, fontSize: 19 });
+      // 8 pastilles de progression (la 8e, carrée, = boss)
+      const dots = this.add.graphics();
+      const dy = top + ART_H + 112;
+      for (let k = 0; k < 8; k++) {
+        const lx = tx + 6 + k * 21;
+        const lv = levels[k];
+        const okLv = Save.level(lv.id).completed;
+        dots.fillStyle(okLv ? 0xf7d774 : open && lv.data ? 0x7fd1c7 : 0x2f4a52, 1);
+        if (k === 7) dots.fillRoundedRect(lx - 6.5, dy - 6.5, 13, 13, 3);
+        else dots.fillCircle(lx, dy, 5.5);
+      }
+      const state = !unlocked
+        ? `Verrouillé · finis le chapitre ${ch.n - 1}`
+        : !built ? 'En construction' : `${done} / 8 terminés`;
+      const prog = this.add.text(tx, dy + 14, state, {
+        fontFamily: FONTS.ui, fontSize: '14px', color: open ? '#cfe3dc' : '#6f8f8a', wordWrap: { width: cardW - 30 }
+      });
+      items.push(num, name, dots, prog);
+      inner.add(items);
+      if (open) {
+        const b = new Button(this, cx, top + cardH - 32, 'Choisir', () => this.openLevels(ch.n), { primary: true, width: 150, height: 42, fontSize: 18 });
         inner.add(b);
         buttons.push(b);
-      } else {
-        const lock = this.add.image(cx, 118, 'icon-lock').setScale(0.7).setAlpha(0.5);
-        inner.add(lock);
       }
     });
-    const back = new Button(this, 0, 220, 'Retour', () => this.closePanel(), { width: 160, height: 44, fontSize: 19 });
-    back.y = 204;
+    const back = new Button(this, 0, 222, 'Retour', () => this.closePanel(), { width: 160, height: 44, fontSize: 19 });
     inner.add(back);
     buttons.push(back);
     this.panelList = new ButtonList(this, buttons, () => this.closePanel());
@@ -325,7 +361,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private openOptions(): void {
-    const inner = this.openPanel('Options', 520, 470);
+    const inner = this.openPanel('Options', 520, 540);
     const s = () => Save.settings;
     const pct = (v: number) => `${Math.round(v * 100)} %`;
     const buttons: Button[] = [];
@@ -353,6 +389,14 @@ export class MenuScene extends Phaser.Scene {
       Save.updateSettings({ touchControls: next });
       touchBtn.setText(touchLabel(next));
     }, { width: 300, height: 46, fontSize: 19 });
+    const qLabel = (q: string) => `Netteté : ${q === 'perf' ? 'économe' : 'maximale'}`;
+    const qualityBtn = new Button(this, 0, -166, qLabel(s().quality), () => {
+      const next = s().quality === 'perf' ? 'auto' : 'perf';
+      Save.updateSettings({ quality: next });
+      qualityBtn.setText(qLabel(next) + ' (au redémarrage)');
+    }, { width: 360, height: 40, fontSize: 17 });
+    inner.add(qualityBtn);
+    buttons.push(qualityBtn);
     let armed = false;
     const resetBtn = new Button(this, 0, 130, 'Effacer la progression', () => {
       if (!armed) {

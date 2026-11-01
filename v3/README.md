@@ -35,7 +35,10 @@ Les manettes (disposition standard : Xbox, PlayStation, Switch Pro, génériques
 
 - Architecture complète pour 5 chapitres × 8 niveaux (registre des 40 niveaux, sélection, sauvegarde).
 - Direction artistique du chapitre 1 « La Serre des Évidences ».
-- **Niveau 1-1 « Le chemin trop poli » entièrement jouable** (vertical slice).
+- **Niveaux 1-1 « Le chemin trop poli » et 1-2 « Les fleurs indiscrètes » entièrement jouables.**
+- Tutoriel des commandes au premier niveau joué (clavier, manette ou tactile, détecté automatiquement).
+- Indices contextuels discrets si le joueur reste bloqué.
+- Rendu haute résolution : le canevas suit l'écran (Full HD, 1440p, 4K) et les illustrations sont repeintes à cette résolution (`src/core/Display.ts`).
 - Menu, sélection des chapitres, options (volumes, muet, tactile, effacement de sauvegarde), crédits.
 - HUD discret, pause, écran de victoire, records en localStorage.
 
@@ -60,7 +63,8 @@ src/
   player/Player.ts        contrôleur (coyote time, jump buffer, saut variable) + rig animé
   traps/
     Trap.ts               contrat commun : machine à états, reset, gag de mort
-    ShyStone.ts           pavé qui réagit à l'hésitation (+ variante ascenseur)
+    ShyStone.ts           pavé qui réagit à l'hésitation (+ variante ascenseur à sablier)
+    Sneezer.ts            fleur indiscrète : observe, inspire, éternue (souffle directionnel)
     Snapper.ts            Dionée suspendue (danger rythmique annoncé)
     Checkpoint.ts         bourgeon qui éclot
     ExitDoor.ts           porte de sortie (gag « Pas si vite ! »)

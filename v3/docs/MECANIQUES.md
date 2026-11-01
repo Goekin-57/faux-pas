@@ -9,7 +9,7 @@ Légende intelligence : **R** réagit · **E** exploite une attente · **P** man
 | Niv. | Titre | Ce qui déclenche | Réponse du monde | Int. | Statut |
 |---|---|---|---|---|---|
 | 1-1 | Le chemin trop poli | Immobilité (hésitation) | Le sol cède, ou sert d'ascenseur si on hésite exprès | R | ✅ jouable |
-| 1-2 | Les fleurs indiscrètes | Être regardé longtemps (distance + durée) | Éternuement directionnel = poussée exploitable | R | |
+| 1-2 | Les fleurs indiscrètes | Être regardé longtemps (distance + durée) | Éternuement directionnel = poussée exploitable | R | ✅ jouable |
 | 1-3 | La ronde des escargots | Saut à la verticale d'une créature | La créature se rétracte = plateforme temporaire | R | |
 | 1-4 | Le parapluie rebelle | Aucun (accumulation de pluie, temps) | Bascule brutale de la géométrie, annoncée par l'inclinaison | R | |
 | 1-5 | Les haies susceptibles | Intensité du mouvement (accélération, saut brusque) | Fermeture des haies ; le calme ouvre | R | |
@@ -66,3 +66,31 @@ Légende intelligence : **R** réagit · **E** exploite une attente · **P** man
 
 1-1 (« continue à bouger ») et 1-5 (« ne fonce pas ») observent toutes deux la façon de bouger, mais demandent des
 comportements opposés : c'est voulu, 1-5 casse le réflexe appris en 1-1.
+
+
+## Règles de conception des pièges (« trolls »)
+
+Un bon piège de NOT SO FAST! se comprend **après** l'échec, jamais grâce à un panneau :
+
+1. **Observable** : chaque piège montre son état (yeux, tremblement, sablier, pollen, son). Rien ne tue sans avoir été visible.
+2. **Déterministe** : mêmes actions → même résultat. Aucune part de hasard dans le comportement.
+3. **Retournable** : le danger est presque toujours aussi la solution (le pavé qui cède devient un ascenseur ; l'éternuement devient une catapulte).
+4. **Une idée neuve par niveau**, déclinée en 3 à 5 situations différentes, sans « sol qui disparaît » ni « pics surprise » recyclés.
+5. **Le second piège est le vrai** : la surprise vient souvent d'un élément qu'on croyait déjà compris (la fleur lilas « inoffensive » du 1-2, la fleur du sol qui « aide » mais pousse dans le mur).
+
+Progression de l'intelligence : ch.1 réagit à un comportement simple → ch.2 exploite une habitude → ch.3 trompe la perception →
+ch.4 combine plusieurs systèmes → ch.5 observe le joueur et tente de prédire ses décisions.
+
+## 1-2 « Les fleurs indiscrètes » — détail des situations
+
+| Section | Situation | Ce que le joueur apprend |
+|---|---|---|
+| Découverte | Une fleur tournée vers lui le repousse (sans danger), puis reste sonnée | Le souffle repousse ; la fleur sonnée ne voit rien |
+| Catapulte | Fossé trop large ; une fleur est tournée vers le vide | Se placer DANS le souffle pour être projeté |
+| Trampoline | Fleur géante tournée vers le ciel ; sa corolle est un plateau | Le souffle vers le haut = super-saut |
+| Duel | La fleur lilas, en face, voit de très loin mais lentement | L'appâter d'abord (de loin), traverser pendant qu'elle est sonnée |
+| Final | La fleur du sol pousse dans le mur ; la géante à côté | Combiner : monter d'abord, se laisser porter en l'air |
+| Portier | Petite fleur devant la porte | Ne pas traîner (l'inverse du 1-1, où il fallait ralentir) |
+
+Un seul point de contrôle par niveau, et seulement s'il évite de refaire une longue partie déjà maîtrisée
+(1-1 : au milieu, avant la haie ; 1-2 : en haut de la corniche, avant le duel).

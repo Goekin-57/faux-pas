@@ -41,6 +41,8 @@ export class Player {
   visualScale = 1;
   /** Vitesse de marche relative (écran d'accueil : flânerie). Jamais modifiée en jeu. */
   speedScale = 1;
+  /** Temps restant d'une propulsion extérieure (bourrasque). */
+  private launchT = 0;
 
   private lastGroundedAt = -1000;
   private jumpBufferedAt = -1000;
@@ -150,15 +152,21 @@ export class Player {
       const vx = b.velocity.x;
       let target = dir * PHYSICS.runSpeed * this.speedScale;
       let accel: number;
+      if (this.launchT > 0) this.launchT -= dt;
+      const launched = this.launchT > 0;
       if (dir !== 0) {
         accel = this.grounded ? PHYSICS.groundAccel : PHYSICS.airAccel;
         if (Math.sign(vx) !== dir && Math.abs(vx) > 10) accel *= PHYSICS.turnBoost;
+        if (launched) accel *= 0.35; // propulsé : on garde un peu de contrôle, pas tout
         this.facing = dir as 1 | -1;
       } else {
         target = 0;
         accel = this.grounded ? PHYSICS.groundDecel : PHYSICS.airDecel;
+        if (launched) accel = 0;
       }
-      b.setVelocityX(approach(vx, target, accel * dt));
+      // en l'air, une poussée extérieure (bourrasque) n'est pas freinée si on va dans son sens
+      const keepMomentum = !this.grounded && Math.abs(vx) > Math.abs(target) && (dir === 0 ? launched : Math.sign(vx) === dir);
+      if (!keepMomentum) b.setVelocityX(approach(vx, target, accel * dt));
 
       // ---- saut (coyote time + buffer + hauteur variable)
       if (c.jumpPressed) this.jumpBufferedAt = this.time;
@@ -405,6 +413,7 @@ export class Player {
   }
 
   revive(x: number, y: number): void {
+    this.launchT = 0;
     this.alive = true;
     this.frozen = false;
     this.body.enable = true;
@@ -420,6 +429,22 @@ export class Player {
     this.squash = 0;
     this.squashVel = 18;
     this.setExpression('open', 400);
+  }
+
+  /**
+   * Propulsion par un élément du décor (éternuement d'une fleur).
+   * `lock` : durée pendant laquelle la poussée n'est ni freinée ni annulée par les commandes.
+   */
+  launch(vx: number, vy: number, lock: number): void {
+    if (!this.alive) return;
+    const b = this.body;
+    b.setVelocity(vx, vy);
+    this.launchT = lock;
+    this.jumping = false;
+    this.grounded = false;
+    this.lastGroundedAt = -1000;
+    this.squashVel = -16;
+    this.setExpression('open', 700);
   }
 
   /** Petit salut de la main (écran d'accueil). */

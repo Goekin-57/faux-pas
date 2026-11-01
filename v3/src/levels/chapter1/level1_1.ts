@@ -97,11 +97,10 @@ export function level1_1(): LevelData {
       { x: 7757, pathY: G, offset: 1.55 }
     ],
 
+    // Un seul point de contrôle, au milieu : après les escaliers et la Dionée (la partie la plus
+    // longue à refaire), avant la haie. Les deux premières parties ne sont jamais à refaire.
     checkpoints: [
-      { x: 2470, groundY: G },
-      { x: 4720, groundY: 470 },
-      { x: 5160, groundY: G },
-      { x: 7080, groundY: G }
+      { x: 4720, groundY: 470 }
     ],
 
     exit: { x: 8150, groundY: G, scootTo: 8340 },
@@ -128,6 +127,19 @@ export function level1_1(): LevelData {
       { type: 'fgLeaf', x: 8500, y: H }
     ],
 
-    darkZones: [{ x: 5520, w: 1040, top: 690, h: 120 }]
+    darkZones: [{ x: 5520, w: 1040, top: 690, h: 120 }],
+
+    hints: [
+      {
+        // la haie bloque : il faut rester immobile sur le pavé à sablier pour descendre
+        id: 'lift',
+        area: { x: 5100, w: 420, yMax: 600 },
+        after: 9,
+        at: { x: 5440, y: 420 },
+        icon: 'wait',
+        text: 'Reste immobile sur ce pavé',
+        solvedBelowY: 680
+      }
+    ]
   };
 }

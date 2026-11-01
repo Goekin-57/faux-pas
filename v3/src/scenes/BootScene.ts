@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fitCamera } from '../core/Display';
 import { FONTS, GAME_W, GAME_H } from '../core/constants';
 import { loadSvgTextures } from '../art/textures';
 
@@ -9,6 +10,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    fitCamera(this);
     const label = this.add.text(GAME_W / 2, GAME_H / 2, 'La serre s’éveille…', {
       fontFamily: FONTS.ui, fontSize: '22px', color: '#cfe3dc'
     }).setOrigin(0.5).setAlpha(0);

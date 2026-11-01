@@ -113,8 +113,10 @@ export class MenuBackdrop {
     s.add.image(0, 0, 'vignette').setOrigin(0).setDepth(DEPTH.vignette).setAlpha(0.8);
 
     s.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
-      this.tx = Phaser.Math.Clamp(p.x / GAME_W - 0.5, -0.5, 0.5) * 2;
-      this.ty = Phaser.Math.Clamp(p.y / GAME_H - 0.5, -0.5, 0.5) * 2;
+      // p.x est en pixels du canevas (résolution réelle) : on normalise par sa taille
+      const sw = s.scale.width, sh = s.scale.height;
+      this.tx = Phaser.Math.Clamp(p.x / sw - 0.5, -0.5, 0.5) * 2;
+      this.ty = Phaser.Math.Clamp(p.y / sh - 0.5, -0.5, 0.5) * 2;
     });
   }
 

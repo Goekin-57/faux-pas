@@ -1,3 +1,5 @@
+import type { FlowerDef } from '../traps/Sneezer';
+
 // Format de données d'un niveau. Chaque niveau est composé à la main :
 // aucune génération aléatoire d'obstacles.
 
@@ -30,6 +32,21 @@ export interface DecorDef {
   flip?: boolean;
 }
 
+/**
+ * Indice contextuel : n'apparaît que si le joueur reste bloqué dans une zone.
+ * Jamais affiché d'emblée (le piège garde sa surprise).
+ */
+export interface HintDef {
+  id: string;
+  area: { x: number; w: number; yMax: number }; // zone où l'on considère le joueur "bloqué"
+  after: number;                                 // secondes cumulées dans la zone
+  at: { x: number; y: number };                  // ancrage de la bulle (monde)
+  icon: 'wait' | 'up' | 'flower' | 'eye';
+  text: string;
+  solvedBelowY?: number;                         // résolu dès que le joueur passe sous cette hauteur
+  solvedRightOf?: number;                        // … ou à droite de cette position
+}
+
 export interface LevelData {
   id: string;
   chapter: number;
@@ -43,10 +60,13 @@ export interface LevelData {
   stones: StoneDef[];
   thorns: ThornsDef[];
   snappers: SnapperDef[];
+  flowers?: FlowerDef[];
   checkpoints: CheckpointDef[];
-  exit: { x: number; groundY: number; scootTo: number };
+  /** gag 'scoot' : la porte recule si on arrive en courant (1-1). */
+  exit: { x: number; groundY: number; scootTo: number; gag?: 'scoot' | 'none' };
   decor: DecorDef[];
   darkZones?: { x: number; w: number; top: number; h: number }[]; // tunnels (assombrissement)
+  hints?: HintDef[];
 }
 
 export interface LevelMeta {

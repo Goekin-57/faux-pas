@@ -12,6 +12,7 @@ export interface Settings {
   sfx: number;   // 0..1
   muted: boolean;
   touchControls: 'auto' | 'on' | 'off';
+  quality: 'auto' | 'perf'; // netteté maximale ou économie (appliqué au prochain lancement)
 }
 
 export interface SaveData {
@@ -19,6 +20,7 @@ export interface SaveData {
   levels: Record<string, LevelRecord>;
   totalDeaths: number;
   settings: Settings;
+  flags: Record<string, boolean>; // ex. tutoriel déjà vu
 }
 
 const KEY = 'not-so-fast/save-v1';
@@ -28,7 +30,8 @@ function defaults(): SaveData {
     version: 1,
     levels: {},
     totalDeaths: 0,
-    settings: { music: 0.55, sfx: 0.8, muted: false, touchControls: 'auto' }
+    settings: { music: 0.55, sfx: 0.8, muted: false, touchControls: 'auto', quality: 'auto' },
+    flags: {}
   };
 }
 
@@ -45,7 +48,8 @@ class SaveStore {
           ...d,
           ...parsed,
           settings: { ...d.settings, ...(parsed.settings ?? {}) },
-          levels: { ...(parsed.levels ?? {}) }
+          levels: { ...(parsed.levels ?? {}) },
+          flags: { ...(parsed.flags ?? {}) }
         } as SaveData;
       }
     } catch {
@@ -69,6 +73,15 @@ class SaveStore {
     const i = order.indexOf(id);
     if (i <= 0) return true;
     return this.level(order[i - 1]).completed;
+  }
+
+  flag(name: string): boolean {
+    return !!this.data.flags[name];
+  }
+
+  setFlag(name: string, v = true): void {
+    this.data.flags[name] = v;
+    this.persist();
   }
 
   addDeath(): void {

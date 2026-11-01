@@ -3,6 +3,7 @@
 
 import { canvas, rng } from '../art/paint';
 import { FONTS } from '../core/constants';
+import { DISPLAY } from '../core/Display';
 
 const NAVY = '#24306a';
 const NAVY_DEEP = '#151d47';
@@ -60,7 +61,8 @@ function paintWord(text: string, st: WordStyle): HTMLCanvasElement {
     });
   };
 
-  const [c, ctx] = canvas(W, H);
+  const res = Math.max(2, DISPLAY.TEX);
+  const [c, ctx] = canvas(W, H, res);
   ctx.font = font;
   ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
@@ -113,7 +115,7 @@ function paintWord(text: string, st: WordStyle): HTMLCanvasElement {
   eachLetter(ctx, 0, (i) => ctx.strokeText(chars[i], 0, 0));
 
   // 4) remplissage en dégradé + reflets, peints sur un calque masqué par les lettres
-  const [lc, l] = canvas(W, H);
+  const [lc, l] = canvas(W, H, res);
   l.font = font;
   l.lineJoin = 'round';
   const grad = (stops: [number, string][]) => {
@@ -149,7 +151,7 @@ function paintWord(text: string, st: WordStyle): HTMLCanvasElement {
       l.fill();
     });
   });
-  ctx.drawImage(lc, 0, 0);
+  ctx.drawImage(lc, 0, 0, W, H);
 
   // 5) liseré clair intérieur (finition "émail")
   ctx.strokeStyle = 'rgba(255,248,228,0.55)';
@@ -160,7 +162,7 @@ function paintWord(text: string, st: WordStyle): HTMLCanvasElement {
   return c;
 }
 
-export const LOGO_RES = 2; // peint à 2x, affiché à 0,5 : bords nets sur écrans haute densité
+export const LOGO_RES = 1; // la haute résolution est gérée par canvas() (core/Display)
 
 export function paintLogoNotSo(): HTMLCanvasElement {
   return paintWord('NOT SO', {
@@ -284,7 +286,16 @@ export function paintMenuGround(w: number, h: number): HTMLCanvasElement {
 
 // ------------------------------------------------------------------ FLEUR QUI ÉTERNUE
 
-export function paintFlowerHead(): HTMLCanvasElement {
+export type PetalPalette = { outer: [string, string, string]; inner: [string, string, string] };
+
+export const PETALS: Record<string, PetalPalette> = {
+  peach: { outer: ['#e8846b', '#f6b89a', '#c2614c'], inner: ['#f39a7c', '#ffd2b8', '#d9785e'] },
+  lilac: { outer: ['#9a7fd1', '#c9b6f2', '#6f58a8'], inner: ['#b39ce6', '#e4d8ff', '#8a72c4'] },
+  sun: { outer: ['#e9a93a', '#ffd776', '#b97b1f'], inner: ['#f4c050', '#ffe9a8', '#d6982e'] },
+  coral: { outer: ['#d9566b', '#f59aa6', '#a83a4d'], inner: ['#e87586', '#ffc8d0', '#c4566a'] }
+};
+
+export function paintFlowerHead(palette: PetalPalette = PETALS.peach): HTMLCanvasElement {
   const S = 180;
   const [c, ctx] = canvas(S, S);
   const cx = S / 2, cy = S / 2;
@@ -297,10 +308,10 @@ export function paintFlowerHead(): HTMLCanvasElement {
       ctx.translate(cx, cy);
       ctx.rotate(a);
       const g = ctx.createLinearGradient(0, 0, len, 0);
-      if (ring === 0) { g.addColorStop(0, '#e8846b'); g.addColorStop(1, '#f6b89a'); }
-      else { g.addColorStop(0, '#f39a7c'); g.addColorStop(1, '#ffd2b8'); }
+      const pal = ring === 0 ? palette.outer : palette.inner;
+      g.addColorStop(0, pal[0]); g.addColorStop(1, pal[1]);
       ctx.fillStyle = g;
-      ctx.strokeStyle = ring === 0 ? '#c2614c' : '#d9785e';
+      ctx.strokeStyle = pal[2];
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(10, 0);
@@ -318,7 +329,7 @@ export function paintFlowerHead(): HTMLCanvasElement {
 }
 
 /** Cœur de la fleur avec son visage : 'calm' | 'inhale' | 'sneeze'. */
-export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze'): HTMLCanvasElement {
+export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze' | 'watch' | 'dazed'): HTMLCanvasElement {
   const S = 96;
   const [c, ctx] = canvas(S, S);
   const cx = S / 2, cy = S / 2;
@@ -350,6 +361,29 @@ export function paintFlowerFace(kind: 'calm' | 'inhale' | 'sneeze'): HTMLCanvasE
     ctx.beginPath(); ctx.arc(cx - 13, cy - 6, 5, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx + 13, cy - 6, 5, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy + 7, 7, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+  } else if (kind === 'watch') {
+    // grands yeux ouverts SANS pupilles : elles sont dessinées à part et suivent le joueur
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.ellipse(cx - 13, cy - 6, 9, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx + 13, cy - 6, 9, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 5, cy + 12); ctx.lineTo(cx + 5, cy + 12); ctx.stroke();
+  } else if (kind === 'dazed') {
+    // yeux en spirale, langue tirée
+    ctx.lineWidth = 2.4;
+    for (const ex of [-13, 13]) {
+      ctx.beginPath();
+      for (let a = 0; a < Math.PI * 5; a += 0.2) {
+        const rr = 1 + a * 0.55;
+        const px = cx + ex + Math.cos(a) * rr, py = cy - 6 + Math.sin(a) * rr;
+        if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(cx, cy + 16, 7, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+    ctx.fillStyle = '#e8846b';
+    ctx.beginPath(); ctx.ellipse(cx + 3, cy + 14, 4, 5, 0.3, 0, Math.PI * 2); ctx.fill();
   } else if (kind === 'inhale') {
     // yeux plissés, narines dilatées, bouche qui aspire
     ctx.beginPath(); ctx.moveTo(cx - 19, cy - 9); ctx.lineTo(cx - 8, cy - 5); ctx.stroke();

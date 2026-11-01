@@ -174,6 +174,22 @@ class AudioEngine {
       case 'giggle':
         [880, 990, 880, 1046].forEach((f, i) => this.tone(out, t + i * 0.07, 'sine', f, f * 1.08, 0.06, 0.05));
         break;
+      case 'liftStart':
+        // poulie de jardinier : cliquet + petit carillon (rassurant, pas alarmant)
+        for (let i = 0; i < 3; i++) this.noise(out, t + i * 0.06, 0.02, 3200, 0.05, 'bandpass');
+        this.bell(out, t + 0.12, 660, 0.05);
+        this.tone(out, t + 0.1, 'triangle', 220, 160, 0.5, 0.06);
+        break;
+      case 'hourglass':
+        this.tone(out, t, 'sine', 1320 + 260 * k, 1320 + 260 * k, 0.05, 0.025);
+        break;
+      case 'sniff':
+        this.noise(out, t, 0.09, 3400, 0.06 + 0.04 * k, 'bandpass', 0.03);
+        this.noise(out, t + 0.12, 0.07, 3800, 0.05 + 0.04 * k, 'bandpass', 0.03);
+        break;
+      case 'dazed':
+        this.tone(out, t, 'sine', 700, 300, 0.5, 0.05, 9);
+        break;
       case 'boing':
         this.tone(out, t, 'sine', 260, 520, 0.22, 0.07, 14);
         break;
@@ -238,7 +254,7 @@ export type SfxName =
   | 'jump' | 'land' | 'step' | 'tileWarn' | 'tileSink' | 'tileRise'
   | 'snapWake' | 'chomp' | 'deathPrick' | 'deathChomp' | 'respawn'
   | 'checkpoint' | 'doorScoot' | 'doorOpen' | 'victory' | 'uiHover' | 'uiClick' | 'bubble'
-  | 'whoosh' | 'logoThud' | 'sneezeIn' | 'sneeze' | 'giggle' | 'boing';
+  | 'whoosh' | 'logoThud' | 'sneezeIn' | 'sneeze' | 'giggle' | 'boing' | 'liftStart' | 'hourglass' | 'sniff' | 'dazed';
 
 // ---------- Musique générative douce ----------
 // Serre : pentatonique de Fa, marimba + nappe + basse pizzicato, ~88 BPM.

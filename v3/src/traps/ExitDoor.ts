@@ -18,7 +18,7 @@ export class ExitDoor {
   private scooted = false;
   private time = 0;
 
-  constructor(private scene: Phaser.Scene, x: number, readonly groundY: number, private scootTo: number, private onEnter: () => void) {
+  constructor(private scene: Phaser.Scene, x: number, readonly groundY: number, private scootTo: number, private onEnter: () => void, private gag: 'scoot' | 'none' = 'scoot') {
     this.x = x;
     this.glow = scene.add.image(0, -8, 'door-glow').setOrigin(0.5, 1).setScale(0.5);
     this.leaf = scene.add.image(-30, -8, 'door-leaf').setOrigin(0, 1).setScale(0.5);
@@ -34,7 +34,7 @@ export class ExitDoor {
     const dx = this.x - p.x;
     if (this.state === 'closed' && Math.abs(dx) < 150 && Math.abs(p.bottom - this.groundY) < 30) {
       const fast = Math.abs(p.body.velocity.x) > 210;
-      if (fast && !this.scooted && dx > 0) this.scoot(ctx);
+      if (this.gag === 'scoot' && fast && !this.scooted && dx > 0) this.scoot(ctx);
       else this.open(ctx);
     }
     if (this.state === 'open' && Math.abs(dx) < 18 && Math.abs(p.bottom - this.groundY) < 30) {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fitCamera } from '../core/Display';
 import { FONTS, GAME_W, GAME_H } from '../core/constants';
 import { Bus, EV, formatTime, type HudStats, type VictoryStats } from '../core/Bus';
 import { Audio } from '../core/Audio';
@@ -6,6 +7,7 @@ import { Save } from '../core/Save';
 import { touchState } from '../core/Controls';
 import { PadReader, PAD } from '../core/Pad';
 import { Button, ButtonList } from '../ui/Button';
+import { Tutorial } from '../ui/Tutorial';
 import { levelMeta, nextLevel } from '../levels';
 
 /** Interface en jeu : discrète, jamais par-dessus les plateformes. */
@@ -18,12 +20,14 @@ export class HUDScene extends Phaser.Scene {
   private escKey?: Phaser.Input.Keyboard.Key;
   private paused = false;
   private padReader = new PadReader();
+  private tutorial: Tutorial | null = null;
 
   constructor() {
     super('HUD');
   }
 
   create(): void {
+    fitCamera(this);
     this.overlay = null;
     this.list = null;
     this.paused = false;
@@ -61,6 +65,9 @@ export class HUDScene extends Phaser.Scene {
 
     this.buildTouchControls();
 
+    // tutoriel des commandes : uniquement au tout premier niveau joué
+    this.tutorial = Save.flag('tutorial') ? null : new Tutorial(this, () => Save.setFlag('tutorial'));
+
     this.escKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ESC, false);
     this.escKey?.on('down', () => { if (this.paused) this.resume(); });
     this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.P, false).on('down', () => { if (this.paused) this.resume(); });
@@ -83,6 +90,7 @@ export class HUDScene extends Phaser.Scene {
   update(_t: number, delta: number): void {
     // Start (manette) reprend la partie depuis la pause, comme Échap au clavier
     this.padReader.poll(delta / 1000);
+    if (!this.paused) this.tutorial?.update();
     if (this.paused && this.padReader.pressed(PAD.START)) this.resume();
   }
 

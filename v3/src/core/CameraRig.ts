@@ -74,7 +74,7 @@ export class CameraRig {
     this.cx = smoothDamp(this.cx, t.cx + this.look, this.vx, FOLLOW_X_TIME, dt);
 
     // verticale : calée sur le dernier appui
-    const viewH = this.cam.height;
+    const viewH = this.cam.height / this.cam.zoom;
     let yTime = FOLLOW_Y_TIME;
     if (t.grounded) {
       this.anchorY = t.bottom;
@@ -90,7 +90,7 @@ export class CameraRig {
   }
 
   private apply(): void {
-    const w = this.cam.width, h = this.cam.height;
+    const w = this.cam.width / this.cam.zoom, h = this.cam.height / this.cam.zoom; // vue en unités du monde
     const sx = Math.min(Math.max(this.cx - w / 2, 0), Math.max(0, this.worldW - w));
     const sy = Math.min(Math.max(this.cy - h / 2, 0), Math.max(0, this.worldH - h));
     // la caméra ne "s'accumule" pas contre un bord du niveau (pas de retard au retour)

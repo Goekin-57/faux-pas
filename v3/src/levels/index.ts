@@ -1,5 +1,6 @@
 import type { ChapterMeta, LevelMeta } from './types';
 import { level1_1 } from './chapter1/level1_1';
+import { level1_2 } from './chapter1/level1_2';
 
 export const CHAPTERS: ChapterMeta[] = [
   { n: 1, name: 'La Serre des Évidences', palette: [0x8fb59a, 0x7fd1c7, 0xf6b89a, 0xf7d774] },
@@ -23,7 +24,8 @@ const NAMES: string[][] = [
 ];
 
 const BUILT: Record<string, LevelMeta['data']> = {
-  '1-1': level1_1
+  '1-1': level1_1,
+  '1-2': level1_2
 };
 
 export const LEVELS: LevelMeta[] = NAMES.flatMap((names, ci) =>
