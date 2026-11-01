@@ -22,6 +22,7 @@ export class Player {
   frozen = false;
   inverted = false;          // commandes inversées (machine à états gérée par la scène)
   springBoost = 0;
+  prevY = 0;                 // position des pieds à l'image précédente (pour détecter qu'on tombe sur quelque chose)
   private lastVy = 0;
   private touch = false;
 

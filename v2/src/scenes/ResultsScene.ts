@@ -5,8 +5,9 @@ import { InputManager } from '../input/InputManager';
 import { AudioManager } from '../audio/AudioManager';
 import { Button, ButtonGroup } from '../ui/Button';
 import { fadeIn, goTo } from '../ui/Transition';
+import { CHAPTER1 } from '../levels/chapter1';
 
-interface Res { id: string; title: string; time: number; deaths: number; coins: number; total: number; stars: number }
+interface Res { level: number; id: string; title: string; time: number; deaths: number; coins: number; total: number; stars: number }
 
 export class ResultsScene extends Phaser.Scene {
   private group!: ButtonGroup;
@@ -16,7 +17,7 @@ export class ResultsScene extends Phaser.Scene {
     AudioManager.music('results');
     const bg = this.add.graphics(); bg.fillGradientStyle(0x2a2560, 0x2a2560, 0x1d1a39, 0x1d1a39, 1); bg.fillRect(0, 0, W, H);
     for (let i = 0; i < 40; i++) { const s = this.add.circle(Math.random() * W, Math.random() * H, 1 + Math.random() * 2, 0xffffff, 0.5); this.tweens.add({ targets: s, alpha: 0.1, duration: 800 + Math.random() * 1500, yoyo: true, repeat: -1 }); }
-    this.add.text(W / 2, 62, 'NIVEAU TERMINÉ', { fontFamily: FONT.display, fontSize: '40px', color: CSS.sun, stroke: CSS.ink, strokeThickness: 10 }).setOrigin(0.5);
+    this.add.text(W / 2, 62, r.level === CHAPTER1.length - 1 ? 'CHAPITRE 1 TERMINÉ !' : 'NIVEAU TERMINÉ', { fontFamily: FONT.display, fontSize: '40px', color: CSS.sun, stroke: CSS.ink, strokeThickness: 10 }).setOrigin(0.5);
     this.add.text(W / 2, 104, `${r.id} · ${r.title}`, { fontFamily: FONT.body, fontSize: '18px', fontStyle: '800', color: CSS.paper }).setOrigin(0.5);
     // étoiles
     const labels = ['Fini', '3 morts max', 'Toutes les pièces'];
@@ -33,12 +34,14 @@ export class ResultsScene extends Phaser.Scene {
       this.add.text(W / 2 - 170, 276 + i * 32, k, { fontFamily: FONT.body, fontSize: '20px', fontStyle: '800', color: CSS.paper });
       this.add.text(W / 2 + 170, 276 + i * 32, v, { fontFamily: FONT.display, fontSize: '20px', color: CSS.sun }).setOrigin(1, 0);
     });
+    const next = CHAPTER1[r.level + 1];
     const items = [
-      new Button(this, W / 2 - 230, 430, 'Rejouer', () => goTo(this, 'Game'), { w: 200 }),
-      new Button(this, W / 2, 430, 'Menu', () => goTo(this, 'Menu'), { w: 200, primary: true }),
-      new Button(this, W / 2 + 230, 430, 'Niveau 1-2', () => {}, { w: 200, disabled: true, note: 'en construction' }),
+      new Button(this, W / 2 - 230, 430, 'Rejouer', () => goTo(this, 'Game', { level: r.level }), { w: 200 }),
+      new Button(this, W / 2, 430, 'Menu', () => goTo(this, 'Menu'), { w: 200 }),
+      next ? new Button(this, W / 2 + 230, 430, `Niveau ${next.id}`, () => goTo(this, 'Game', { level: r.level + 1 }), { w: 200, primary: true })
+        : new Button(this, W / 2 + 230, 430, 'Chapitre 2', () => {}, { w: 200, disabled: true, note: 'bientôt' }),
     ];
-    this.group = new ButtonGroup(items, 1);
+    this.group = new ButtonGroup(items, next ? 2 : 1);
     this.add.text(W / 2, 500, 'Espace, Entrée ou Ⓐ pour continuer', { fontFamily: FONT.body, fontSize: '14px', fontStyle: '800', color: CSS.paper }).setOrigin(0.5).setAlpha(0.7);
     this.ready = this.time.now + 600;   // évite de valider avec la touche de saut encore enfoncée
     InputManager.swallow();

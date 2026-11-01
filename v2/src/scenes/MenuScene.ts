@@ -8,6 +8,7 @@ import { HeroView, type CharId, makeHeroTextures } from '../entities/HeroArt';
 import { buildBlock, Parallax } from '../levels/Terrain';
 import { Button, ButtonGroup } from '../ui/Button';
 import { fadeIn, goTo } from '../ui/Transition';
+import { CHAPTER1 } from '../levels/chapter1';
 
 const GROUND = 470;
 let logoShownOnce = false;
@@ -135,13 +136,13 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private makeButtons(): void {
-    const has = SaveManager.hasProgress();
-    const cont = new Button(this, W / 2, 210, has ? 'Continuer' : 'Jouer', () => this.play(), { w: 300, h: 60, size: 26, primary: true, note: has ? 'Niveau 1-1 · Le Pré des Mensonges' : undefined });
+    const has = SaveManager.hasProgress(), nx = this.nextLevel(), spec = CHAPTER1[nx];
+    const cont = new Button(this, W / 2, 210, has ? 'Continuer' : 'Jouer', () => this.play(nx), { w: 300, h: 60, size: 26, primary: true, note: has ? `Niveau ${spec.id} · ${spec.title}` : undefined });
     const mk = (x: number, y: number, t: string, fn: () => void, o = {}) => new Button(this, x, y, t, fn, { w: 236, h: 46, size: 17, ...o });
     const items = [
       cont,
       mk(W / 2 - 126, 286, 'Nouvelle partie', () => this.newGame()),
-      mk(W / 2 + 126, 286, 'Carte du monde', () => {}, { disabled: true, note: 'bientôt' }),
+      mk(W / 2 + 126, 286, 'Niveaux', () => this.openLevels()),
       mk(W / 2 - 126, 346, 'Personnaliser', () => {}, { disabled: true, note: 'bientôt' }),
       mk(W / 2 + 126, 346, 'Paramètres', () => this.openSettings()),
       mk(W / 2, 406, 'Statistiques', () => this.openStats()),
@@ -150,12 +151,41 @@ export class MenuScene extends Phaser.Scene {
     this.group = new ButtonGroup(items, 0);
   }
 
-  private play(): void { AudioManager.unlock(); goTo(this, 'Game'); }
+  private nextLevel(): number { const i = CHAPTER1.findIndex((l) => !SaveManager.data.levels[l.id]?.done); return i < 0 ? CHAPTER1.length - 1 : i; }
+  private play(level = 0): void { AudioManager.unlock(); goTo(this, 'Game', { level }); }
+  // choix du niveau : on peut tout consulter, mais seuls les niveaux débloqués se lancent
+  private openLevels(): void {
+    this.group.items.forEach((b) => b.disableInteractive());
+    const ct = this.add.container(0, 0).setDepth(60);
+    const scrim = this.add.rectangle(0, 0, W, H, COL.ink, 0.6).setOrigin(0, 0).setInteractive();
+    const bg = this.add.graphics(); bg.fillStyle(COL.ink, 1); bg.fillRoundedRect(W / 2 - 400 + 6, 70 + 7, 800, 380, 20); bg.fillStyle(COL.paper, 1); bg.fillRoundedRect(W / 2 - 400, 70, 800, 380, 20); bg.lineStyle(5, COL.ink, 1); bg.strokeRoundedRect(W / 2 - 400, 70, 800, 380, 20);
+    ct.add([scrim, bg, this.add.text(W / 2, 104, 'Chapitre 1 · Le Pré des Mensonges', { fontFamily: FONT.display, fontSize: '22px', color: CSS.ink, padding: { top: 4 } }).setOrigin(0.5)]);
+    const info = this.add.text(W / 2, 370, '', { fontFamily: FONT.body, fontSize: '16px', fontStyle: '800', color: CSS.ink, align: 'center' }).setOrigin(0.5);
+    ct.add(info);
+    const items = CHAPTER1.map((l, i) => {
+      const rec = SaveManager.data.levels[l.id], open = i === 0 || !!SaveManager.data.levels[CHAPTER1[i - 1].id]?.done;
+      const stars = rec ? '★'.repeat(rec.stars) + '☆'.repeat(3 - rec.stars) : '☆☆☆';
+      const b = new Button(this, W / 2 - 270 + (i % 4) * 180, 180 + Math.floor(i / 4) * 92, l.id, () => { this.closeLevels(ct); this.play(i); }, { w: 160, h: 70, size: 20, disabled: !open, note: open ? stars : 'verrouillé', primary: i === 7 && open });
+      b.on('hoverfocus', () => info.setText(`${l.id} · ${l.title}${i === 7 ? ' (boss)' : ''}\n${open ? (rec?.done ? `Fini · ${rec.deaths} morts au total` : 'Pas encore fini') : `Finis d'abord le ${CHAPTER1[i - 1].id}`}`));
+      ct.add(b); return b;
+    });
+    const back = new Button(this, W / 2, 416, 'Retour', () => this.closeLevels(ct), { w: 180, h: 40, size: 16 });
+    ct.add(back);
+    const group = new ButtonGroup([...items, back], Math.min(this.nextLevel(), 7));
+    items[group.index]?.emit('hoverfocus');
+    ct.setAlpha(0); this.tweens.add({ targets: ct, alpha: 1, duration: 160 });
+    this.panel = { ct, group, onBack: () => this.closeLevels(ct) };
+    InputManager.swallow();
+  }
+  private closeLevels(ct: Phaser.GameObjects.Container): void {
+    this.panel = null; this.tweens.add({ targets: ct, alpha: 0, duration: 120, onComplete: () => ct.destroy() });
+    this.group.items.forEach((b) => b.setInteractive({ useHandCursor: true })); InputManager.swallow();
+  }
   private newGame(): void {
-    if (!SaveManager.hasProgress()) { this.play(); return; }
+    if (!SaveManager.hasProgress()) { this.play(0); return; }
     this.openPanel('Nouvelle partie ?', ['Ta progression sera effacée.', 'Tes réglages sont gardés.'], [
       { t: 'Annuler', fn: () => this.closePanel(), primary: false },
-      { t: 'Effacer et jouer', fn: () => { SaveManager.reset(); this.closePanel(); this.play(); }, primary: true },
+      { t: 'Effacer et jouer', fn: () => { SaveManager.reset(); this.closePanel(); this.play(0); }, primary: true },
     ], 0);
   }
   private openStats(): void {

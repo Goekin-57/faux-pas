@@ -14,7 +14,7 @@ export class PauseScene extends Phaser.Scene {
     const resume = () => { this.scene.resume('Game'); this.scene.stop(); InputManager.swallow(); };
     const items = [
       new Button(this, W / 2, 250, 'Reprendre', resume, { primary: true }),
-      new Button(this, W / 2, 316, 'Recommencer', () => { this.scene.stop('Game'); this.scene.stop(); this.scene.start('Game'); }),
+      new Button(this, W / 2, 316, 'Recommencer le niveau', () => { const lv = (this.scene.get('Game') as unknown as { levelIndex: number }).levelIndex ?? 0; this.scene.start('Game', { level: lv }); }, { w: 330 }),
       new Button(this, W / 2, 382, 'Menu principal', () => { this.scene.stop('Game'); this.scene.start('Menu'); }),
     ];
     this.group = new ButtonGroup(items, 0);
