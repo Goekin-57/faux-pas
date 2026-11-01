@@ -66,7 +66,7 @@ await place(2480, 418); await wait(200);
 const r1 = await route([{ ax: 1, until: 'x', v: 2620 }, { ax: 0.6, until: 'ground' }, { ax: 0, until: 'frames', v: 10 }]);
 check('ressort : le second rebond fait passer le mur', r1.best < 250 && r1.x > 2580 && r1.y <= 300 && r1.g, JSON.stringify(r1));
 const r2 = await route([{ place: [1000, 418], ax: 1, until: 'x', v: 1040 }, { jump: true, until: 'fall' }, { until: 'ground' }, { ax: 0, jump: false, until: 'frames', v: 10 }]);
-check('on peut atteindre la plateforme au-dessus du faux sol', Math.abs(r2.y - 345) < 3 && r2.g, JSON.stringify(r2));
+check('on passe le faux sol par la plateforme du dessus', r2.best < 330 && r2.g && !r2.deaths && (Math.abs(r2.y - 345) < 3 || r2.x > 1340), JSON.stringify(r2));
 // parcours complet du niveau sans téléportation (après la remise à zéro), comme un joueur
 await p.evaluate(() => { const g = window.__NSF; g.scene.restart(); });
 await wait(1500);
