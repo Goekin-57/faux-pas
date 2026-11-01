@@ -85,7 +85,7 @@ rep("    ctx.save(); ctx.translate(ox, oy); drawBackdrop(w, t, tier, k);", "    
 rep("        if (SKINNOW) { sprFit('bush', x, y + 2, 34); break; }", "        if (SKINNOW) { sprFit('bush', x, y + (ARTNOW ? 4 : 2), ARTNOW ? 30 : 34); break; }")
 rep("      case 'flower': flower(x, y, COL.pink); break;", "      case 'flower': if (ARTNOW) sprFit('flower', x, y + 4, 26); else flower(x, y, COL.pink); break;")
 rep("      case 'tree':\n", "      case 'tree':\n        if (ARTNOW) { sprFit('tree', x, y + 5, 112); break; }\n")
-rep("""        ctx.fillStyle = SKINNOW ? '#c66a3e' : PAL.block; ctx.fillRect(x - 3, y - 58, 6, 58);""", """        if (ARTNOW) { const f = frm('sign'), r = f[1], sw = Math.max(96, w + 30); ctx.drawImage(f[0], r[0], r[1], r[2], r[3], x - sw / 2, y - 90, sw, 92); ctx.fillStyle = '#3a2416'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.str, x, y - 67); }
+rep("""        ctx.fillStyle = SKINNOW ? '#c66a3e' : PAL.block; ctx.fillRect(x - 3, y - 58, 6, 58);""", """        if (ARTNOW) { const f = frm('sign'), r = f[1], sw = Math.max(100, (w - 18) / 0.7 + 12); ctx.drawImage(f[0], r[0], r[1], r[2], r[3], x - sw / 2, y - 90, sw, 92); ctx.fillStyle = '#3a2416'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.str, x, y - 90 + 92 * 33.5 / 126 + 1); }
         else {
         ctx.fillStyle = SKINNOW ? '#c66a3e' : PAL.block; ctx.fillRect(x - 3, y - 58, 6, 58);""")
 rep("""        ctx.fillStyle = COL.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(p.str, x, y - 68);

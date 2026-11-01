@@ -27,7 +27,7 @@
     for (const [n, r] of Object.entries(SKIN_MAP)) tex.add(n, 0, r[0], r[1], r[2], r[3]);
     const atex = sc.textures.addImage('art', ART.img);
     for (const [n, r] of Object.entries(ART_MAP)) atex.add(n, 0, r[0], r[1], r[2], r[3]);
-    sc.textures.addImage('artfar', ART.far); sc.textures.addImage('artmid', ART.mid);
+    sc.textures.addImage('artfar', ART.far); sc.textures.addImage('artmid', ART.mid); sc.textures.addImage('artdirt', ART.dirt);
     // textures simples pour les effets
     const g = sc.make.graphics({ x: 0, y: 0, add: false });
     g.fillStyle(0xffffff, 1); g.fillCircle(8, 8, 8); g.generateTexture('dot', 16, 16); g.clear();
@@ -110,7 +110,11 @@
   const phxKey = (b) => b.w + 'x' + b.h + (ARTNOW ? 'a' : 'k');
   function phxBlock(sc, b, Lx) {
     const ct = sc.add.container(0, 0).setDepth(10);
-    for (const [n, x, y, w, h] of skinTiles(b, Lx)) ct.add(sc.add.image(x, y, phxTex(n)[0], n).setOrigin(0, 0).setDisplaySize(w, h));
+    if (b._ax == null) { b._ax = b.x; b._ay = b.y; }
+    for (const [n, x, y, w, h] of skinTiles(b, Lx)) {
+      if (n === '@dirt') { const ts = sc.add.tileSprite(x, y, w, h, 'artdirt').setOrigin(0, 0).setTileScale(DIRT_K); ts.tilePositionX = b._ax / DIRT_K; ts.tilePositionY = (b._ay + y) / DIRT_K; ct.add(ts); }
+      else ct.add(sc.add.image(x, y, phxTex(n)[0], n).setOrigin(0, 0).setDisplaySize(w, h));
+    }
     const deco = [];
     for (const [dx, k, h] of b._deco || []) {
       const [tk, r] = phxTex(k), w = (h * r[2]) / r[3], im = sc.add.image(dx, ARTNOW ? 7 : 4, tk, k).setOrigin(0.5, 1).setDisplaySize(w, h);

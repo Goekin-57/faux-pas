@@ -55,7 +55,7 @@
   const decoHidden = (b, Lx, dx) => { const ax = b.x + dx; return Lx.spikes.some((s) => s.vis && s.rise > 0.2 && s.x - 14 < ax && s.x + s.w + 14 > ax && Math.abs(s.y + s.h - b.y) < 30); };
   function skinBlock(b, ox, oy, cut = 0) {
     const Lx = curLevel(), x0 = Math.round(b.x + ox), y0 = Math.round(b.y + oy);
-    for (const [n, x, y, w, h] of skinTiles(b, Lx, cut)) spr(n, x0 + x, y0 + y, w, h);
+    for (const [n, x, y, w, h] of skinTiles(b, Lx, cut)) { if (n === '@dirt') artDirt(b, x0 + x, y0 + y, w, h, ox, oy); else spr(n, x0 + x, y0 + y, w, h); }
     if (cut || !Lx) return;
     for (const [dx, k, h] of b._deco || []) if (!decoHidden(b, Lx, dx)) sprFit(k, x0 + dx, y0 + (ARTNOW ? 7 : 4), h);
   }

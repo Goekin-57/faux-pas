@@ -3,12 +3,21 @@
   const ART = { img: null, far: null, mid: null, ok: false, n: 0 };
   try {
     if (typeof Image !== 'undefined') {
-      const done = () => { if (++ART.n === 3) { ART.ok = true; try { phxBoot(); } catch (e) {} } };
-      for (const [k, src] of [['img', ART_SRC], ['far', ART_FAR], ['mid', ART_MID]]) { const im = new Image(); im.onload = done; im.src = src; ART[k] = im; }
+      const done = () => { if (++ART.n === 4) { ART.ok = true; try { phxBoot(); } catch (e) {} } };
+      for (const [k, src] of [['img', ART_SRC], ['far', ART_FAR], ['mid', ART_MID], ['dirt', ART_DIRT]]) { const im = new Image(); im.onload = done; im.src = src; ART[k] = im; }
     }
   } catch (e) {}
   const ART_WORLDS = { 0: true };
   let ARTNOW = false;
+  const DIRT_K = 0.52;
+  // terre : motif qui suit le bloc s'il tombe, mais reste continu d'un bloc à l'autre
+  function artDirt(b, x, y, w, h, ox, oy) {
+    if (b._ax == null) { b._ax = b.x; b._ay = b.y; }
+    if (!ART.pat) ART.pat = ctx.createPattern(ART.dirt, 'repeat');
+    const p = ART.pat;
+    if (p.setTransform && typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix([DIRT_K, 0, 0, DIRT_K, b.x - b._ax + ox, b.y - b._ay + oy]));
+    ctx.fillStyle = p; ctx.fillRect(x, y, w, h);
+  }
   // image + rectangle d'une vignette : d'abord les images uniques, sinon le pack
   function frm(n) { if (ARTNOW && ART_MAP[n]) return [ART.img, ART_MAP[n]]; const r = SKIN_MAP[n]; return r ? [SKIN.img, r] : null; }
   // découpe d'un bloc avec les images uniques : bouts arrondis, bandeau d'herbe, terre à cailloux, contour
@@ -34,11 +43,7 @@
     if (bh <= 44 && !cut) { row('pf_l', 'pf_m', 'pf_r', 0, 44); if (!b._deco) b._deco = []; return ops; }
     const TH = 32, y1 = cut + TH - 2, bodyH = b.h - y1;
     if (bodyH > 0) {
-      const d = ART_MAP.dirt, dw = d[2] * 0.52, dh = d[3] * 0.52, nx = Math.max(1, Math.round(w / dw)), ny = Math.max(1, Math.round(bodyH / dh));
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-        const xa = Math.round((w * i) / nx), xb = Math.round((w * (i + 1)) / nx), ya = y1 + Math.round((bodyH * j) / ny), yb = y1 + Math.round((bodyH * (j + 1)) / ny);
-        ops.push(['dirt', xa, ya, xb - xa + 1, yb - ya + 1]);
-      }
+      ops.push(['@dirt', 0, y1, w, bodyH]);   // terre en motif continu, calé sur le monde
       if (!nb.l) ops.push(['ink', 0, y1, 3, bodyH]);
       if (!nb.r) ops.push(['ink', w - 3, y1, 3, bodyH]);
       if (!bottomOpen) ops.push(['ink', 0, b.h - 3, w, 3]);
