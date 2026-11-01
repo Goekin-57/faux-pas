@@ -8,7 +8,7 @@ import type { Player } from './Player';
 export interface Tile { x: number; w: number; cracked: boolean; broken: number; ct: Phaser.GameObjects.Container; zone: Phaser.GameObjects.Zone; body: Phaser.Physics.Arcade.StaticBody; cracks: Phaser.GameObjects.Graphics }
 export interface BossCtx {
   player: Player; tiles: Tile[]; deaths: number;
-  hurt(fromX: number): void; banner(t: string, c: string, sub?: string): void; taunt(t: string): void;
+  hurt(fromX: number): void; banner(t: string, c: string, sub?: string): void; taunt(t: string): void; cue(t: string, x: number, y: number): void;
   shake(ms: number, k: number): void; burst(x: number, y: number, k: 'dust' | 'chips' | 'spark', n?: number): void;
   defeated(): void;
 }
@@ -29,6 +29,10 @@ export class Megaroc {
   private from = 0; private to = 0; private jumpT = 0; private jumpDur = 0.9; private combo = 0;
   readonly w = 110; readonly h = 80;
   private sunkTile: Tile | null = null;
+  private shadow: Phaser.GameObjects.Ellipse;
+  private glowT = 0;
+  private glows = new Map<Tile, Phaser.GameObjects.Rectangle>();
+  private glow(tl: Tile): Phaser.GameObjects.Rectangle { let r = this.glows.get(tl); if (!r) { r = this.scene.add.rectangle(tl.x + tl.w / 2, 424, tl.w - 10, 16, COL.sun, 1).setDepth(5).setAlpha(0); this.glows.set(tl, r); } return r; }
 
   constructor(private scene: Phaser.Scene, private c: BossCtx) {
     this.body = scene.add.image(0, 0, 'rock').setOrigin(0.5, 1);
@@ -38,6 +42,7 @@ export class Megaroc {
     this.ct = scene.add.container(this.x, this.y, [this.body, this.face, this.stars]).setDepth(15);
     this.bar = scene.add.graphics().setScrollFactor(0).setDepth(100);
     this.label = scene.add.text(480, 22, 'MÉGAROC', { fontFamily: FONT.display, fontSize: '18px', color: CSS.paper, stroke: CSS.ink, strokeThickness: 5 }).setOrigin(0.5).setScrollFactor(0).setDepth(101);
+    this.shadow = scene.add.ellipse(0, 422, 20, 8, 0x000000, 0.4).setDepth(9).setVisible(false);
     this.drawFace('angry');
     this.drawBar();
   }
@@ -83,14 +88,15 @@ export class Megaroc {
         this.body.setScale(this.body.scaleX * 1, ((this.h + 10) / this.body.height) * (1 - Math.min(0.2, this.t * 0.4)));
         if (this.t > (this.rage ? 0.35 : 0.55)) {
           this.from = this.x; this.to = Phaser.Math.Clamp(p.x, 80, 880); this.jumpT = 0; this.jumpDur = this.rage ? 0.75 : 0.95;
-          this.state = 'jump'; AudioManager.play('jump');
+          this.state = 'jump'; AudioManager.play('jump'); this.shadow.setVisible(true).setPosition(this.to, 422);
         }
         break;
       case 'jump': {
         this.jumpT += dt; const k = Math.min(1, this.jumpT / this.jumpDur);
         this.x = this.from + (this.to - this.from) * k; this.y = G - Math.sin(k * Math.PI) * 230;
         this.body.setScale(this.body.scaleX, (this.h + 10) / this.body.height * 1.05);
-        if (k >= 1) { this.y = G; this.land(true); }
+        this.shadow.setSize(30 + k * 100, 8 + k * 10).setFillStyle(this.tileAt(this.to)?.cracked ? 0xff2255 : 0x000000, 0.25 + k * 0.25);   // ombre d'impact : où il va tomber
+        if (k >= 1) { this.y = G; this.shadow.setVisible(false); this.land(true); }
         break;
       }
       case 'sunk':
@@ -105,6 +111,15 @@ export class Megaroc {
     if (this.state !== 'prep') this.ct.setX(this.x);
     this.ct.setY(this.y + (this.state === 'sunk' ? 34 : 0));
     this.ct.setScale(this.x < p.x ? 1 : -1, 1);
+    // les dalles fissurées respirent la poussière et luisent (plus fort juste après un rebond raté)
+    this.glowT = Math.max(0, this.glowT - dt);
+    for (const tl of this.c.tiles) if (!tl.cracked) this.glows.get(tl)?.setAlpha(0);
+    for (const tl of this.c.tiles) if (tl.cracked) {
+      const a = (this.c.deaths >= 3 || this.glowT > 0 ? 0.6 : 0.3) * (0.6 + 0.4 * Math.sin(this.t * 5));
+      this.glow(tl).setAlpha(tl.ct.visible ? a : 0);
+      if (Math.random() < dt * 1.2) this.c.burst(tl.x + 20 + Math.random() * (tl.w - 40), G + 4, 'dust', 1);
+    }
+    if (this.rage && this.state !== 'dead' && this.state !== 'fake' && Math.random() < dt * 4) this.c.burst(this.x + (Math.random() - 0.5) * 60, this.y - this.h, 'dust', 1);
     // tuiles cassées qui se reconstruisent
     for (const tl of this.c.tiles) if (tl.broken > 0) { tl.broken -= dt; if (tl.broken <= 0) this.restoreTile(tl); }
     // contacts avec le joueur
@@ -114,7 +129,7 @@ export class Megaroc {
     const crossed = p.body.velocity.y >= 0 && p.prevY <= top + 6 && p.y >= top - 4;
     if (overX && crossed) {
       if (this.state === 'sunk') this.hit();
-      else { p.bounce(460); AudioManager.play('stomp'); this.c.taunt('Trop dur ! Il faut qu\'il soit coincé.'); }
+      else { p.bounce(460); AudioManager.play('stomp'); this.c.burst(p.x, top, 'spark', 8); this.c.cue('Trop dur !', this.x, top - 30); this.glowT = 1.2; }
       return;
     }
     if (!overX || p.y < top - 4 || p.y - 30 > this.y) return;
@@ -132,7 +147,7 @@ export class Megaroc {
       tl.cracked = false; tl.cracks.clear(); tl.ct.setVisible(false); this.sunkTile = tl;
       AudioManager.play('trap'); this.c.burst(this.x, 430, 'chips', 26);
       this.state = 'sunk'; this.t = 0; this.drawFace('dizzy'); this.stars.setVisible(true);
-      this.c.taunt('Il est coincé ! Saute-lui dessus !');
+      this.c.cue('Il est vulnérable !', this.x, 300);
       return;
     }
     // onde de choc : si tu es au sol tout près, tu prends un coup
@@ -147,8 +162,9 @@ export class Megaroc {
     const p = this.c.player;
     p.bounce(560); this.hp--; AudioManager.play('hurt'); this.c.shake(250, 0.016); this.c.burst(this.x, this.y - 40, 'spark', 24);
     this.body.setTint(0xff6688); this.scene.time.delayedCall(180, () => this.body.clearTint());
-    if (this.hp === 1 && !this.rage) { this.rage = true; this.c.taunt('Il est en colère. Il saute deux fois.'); }
+    if (this.hp === 1 && !this.rage) { this.rage = true; this.body.setTint(0xffb0a0); }
     this.drawBar();
+    this.scene.time.delayedCall(200, () => { if (this.rage) this.body.setTint(0xffb0a0); });
     if (this.hp <= 0) { this.defeat(); return; }
     this.popOut();
   }
@@ -172,8 +188,7 @@ export class Megaroc {
   }
   crack(tl: Tile): void {
     tl.cracked = true; const g = tl.cracks; g.clear();
-    if (this.c.deaths >= 3) { g.fillStyle(COL.sun, 0.35); g.fillRoundedRect(4, -6, tl.w - 8, 14, 6); }   // indice après plusieurs morts
-    g.lineStyle(3, COL.outline, 0.9);
+    g.lineStyle(4, COL.outline, 1);
     for (let x = 16; x < tl.w - 10; x += 40) { g.beginPath(); g.moveTo(x, 2); g.lineTo(x + 8, 16); g.lineTo(x + 2, 30); g.moveTo(x + 8, 16); g.lineTo(x + 20, 22); g.strokePath(); }
   }
 

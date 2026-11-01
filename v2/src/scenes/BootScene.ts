@@ -25,7 +25,7 @@ export class BootScene extends Phaser.Scene {
   async create(): Promise<void> {
     document.getElementById('boot')?.remove();
     // les polices sont fournies avec le jeu ; on attend qu'elles soient prêtes (2 s maximum)
-    try { await Promise.race([Promise.all([document.fonts.load('40px Bungee'), document.fonts.load('800 18px Nunito')]), new Promise((r) => setTimeout(r, 2000))]); } catch { /* police de secours */ }
+    try { await Promise.race([Promise.all([document.fonts.load('40px Bungee'), document.fonts.load('800 18px Nunito'), document.fonts.load('900 24px Nunito')]), new Promise((r) => setTimeout(r, 2000))]); } catch { /* police de secours */ }
     this.textures.get('dirt').setFilter(Phaser.Textures.FilterMode.LINEAR);
     this.scene.start('Menu');
   }

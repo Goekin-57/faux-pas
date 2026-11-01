@@ -2,8 +2,10 @@
 import Phaser from 'phaser';
 import '@fontsource/bungee/400.css';
 import '@fontsource/nunito/800.css';
+import '@fontsource/nunito/900.css';
 import { W, H, PHYS } from './core/config';
 import { InputManager } from './input/InputManager';
+import { SaveManager } from './save/SaveManager';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
@@ -28,3 +30,4 @@ let gameTime = 0;   // temps de jeu cumulé (utile aux tests automatiques)
 game.events.on(Phaser.Core.Events.PRE_STEP, (_time: number, delta: number) => { gameTime += delta; InputManager.update(Math.min(0.05, delta / 1000)); });
 (window as unknown as { __GT: () => number }).__GT = () => gameTime;
 (window as unknown as { __GAME?: Phaser.Game }).__GAME = game;
+(window as unknown as { __SAVE?: unknown }).__SAVE = SaveManager;

@@ -6,7 +6,7 @@ export interface SaveData {
   totalDeaths: number;
   totalTime: number;
   custom: { char: string; color: string; hat: string; face: string; outfit: string; trail: string; jumpfx: string };
-  settings: { master: number; music: number; sfx: number; reduceFx: boolean; shake: boolean };
+  settings: { master: number; music: number; sfx: number; reduceFx: boolean; shake: boolean; readable: boolean };
   halloween: { candies: number };
   lastLevel: string | null;
   migratedFrom: string | null;
@@ -21,7 +21,7 @@ const fresh = (): SaveData => ({
   totalDeaths: 0,
   totalTime: 0,
   custom: { char: 'rosa', color: 'base', hat: 'none', face: 'none', outfit: 'none', trail: 'none', jumpfx: 'none' },
-  settings: { master: 0.8, music: 0.6, sfx: 0.9, reduceFx: false, shake: true },
+  settings: { master: 0.8, music: 0.6, sfx: 0.9, reduceFx: false, shake: true, readable: false },
   halloween: { candies: 0 },
   lastLevel: null,
   migratedFrom: null,
@@ -56,7 +56,7 @@ class Saves {
     const st = storage();
     try {
       const raw = st?.getItem(KEY);
-      if (raw) { this.data = { ...fresh(), ...JSON.parse(raw) as SaveData }; return this.data; }
+      if (raw) { const d = JSON.parse(raw) as SaveData; this.data = { ...fresh(), ...d, settings: { ...fresh().settings, ...(d.settings ?? {}) } }; return this.data; }
       const old = st?.getItem(OLD_KEY);
       if (old) { this.data = migrate(JSON.parse(old) as Record<string, unknown>); this.write(); return this.data; }
     } catch { /* sauvegarde illisible : on repart proprement sans écraser l'ancienne */ }

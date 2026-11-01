@@ -39,10 +39,12 @@ export function buildBlock(scene: Phaser.Scene, x: number, y: number, w: number,
 
 // petites fissures dessinées sur un sol piégé : l'indice visuel d'un faux sol
 export function drawCracks(scene: Phaser.Scene, ct: Phaser.GameObjects.Container, w: number): Phaser.GameObjects.Graphics {
+  // dalle fragile : joints visibles sur les côtés et fissures nettes jusque dans l'herbe
   const g = scene.add.graphics();
-  g.lineStyle(2, COL.outline, 0.55);
-  for (let x = 18; x < w - 12; x += 46) {
-    g.beginPath(); g.moveTo(x, 34); g.lineTo(x + 6, 44); g.lineTo(x + 2, 54); g.moveTo(x + 6, 44); g.lineTo(x + 14, 48); g.strokePath();
+  g.lineStyle(3, COL.outline, 0.85);
+  g.lineBetween(1, 8, 1, 60); g.lineBetween(w - 1, 8, w - 1, 60);
+  for (let x = 14; x < w - 10; x += 38) {
+    g.beginPath(); g.moveTo(x, 6); g.lineTo(x + 7, 18); g.lineTo(x + 2, 30); g.lineTo(x + 9, 42); g.moveTo(x + 7, 18); g.lineTo(x + 17, 22); g.moveTo(x + 2, 30); g.lineTo(x - 6, 36); g.strokePath();
   }
   ct.add(g);
   return g;

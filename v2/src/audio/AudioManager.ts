@@ -1,7 +1,7 @@
 // Sons et musiques synthétisés (Web Audio) : aucun fichier, aucune licence à gérer.
 import { SaveManager } from '../save/SaveManager';
 
-type Sfx = 'jump' | 'land' | 'coin' | 'hurt' | 'die' | 'click' | 'move' | 'trap' | 'crack' | 'spring' | 'checkpoint' | 'win' | 'fake' | 'heart' | 'stomp' | 'whoosh' | 'laugh';
+type Sfx = 'jump' | 'land' | 'coin' | 'hurt' | 'die' | 'click' | 'move' | 'trap' | 'crack' | 'spring' | 'checkpoint' | 'win' | 'fake' | 'heart' | 'stomp' | 'whoosh' | 'laugh' | 'thunder' | 'creak' | 'snap' | 'bell' | 'rumble';
 type Track = 'menu' | 'prairie' | 'results' | null;
 
 class Audio {
@@ -68,6 +68,11 @@ class Audio {
       case 'heart': this.tone(784, 0.12, 'sine', 0.1); this.tone(1175, 0.2, 'sine', 0.1, 0, 0.08); break;
       case 'stomp': this.tone(180, 0.12, 'square', 0.12, -90); break;
       case 'whoosh': this.noise(0.3, 0.09, 1200); break;
+      case 'thunder': this.noise(0.9, 0.22, 90); this.tone(60, 0.8, 'sawtooth', 0.05, -20); break;
+      case 'creak': this.tone(190, 0.22, 'sawtooth', 0.035, 70); this.tone(240, 0.16, 'sawtooth', 0.025, -60, 0.12); break;
+      case 'snap': this.tone(900, 0.05, 'square', 0.09, -500); this.noise(0.06, 0.1, 2000); break;
+      case 'bell': [1319, 1568, 2093].forEach((f, i) => this.tone(f, 0.35, 'sine', 0.08, 0, i * 0.07)); break;
+      case 'rumble': this.noise(1.1, 0.2, 60); this.tone(48, 1.0, 'triangle', 0.12, 10); break;
       case 'laugh': [0, 0.11, 0.22].forEach((d) => this.tone(700, 0.08, 'square', 0.06, -120, d)); break;
     }
   }

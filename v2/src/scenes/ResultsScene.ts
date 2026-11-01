@@ -24,7 +24,7 @@ export class ResultsScene extends Phaser.Scene {
     for (let i = 0; i < 3; i++) {
       const x = W / 2 + (i - 1) * 130, got = i < 1 ? true : i === 1 ? r.deaths <= 3 : r.coins === r.total;
       const st = this.add.text(x, 178, '★', { fontFamily: FONT.display, fontSize: '72px', color: got ? CSS.sun : '#4a4570', stroke: CSS.ink, strokeThickness: 8 }).setOrigin(0.5).setScale(got ? 0 : 1);
-      this.add.text(x, 226, labels[i], { fontFamily: FONT.body, fontSize: '14px', fontStyle: '800', color: got ? CSS.paper : '#8a86a8' }).setOrigin(0.5);
+      this.add.text(x, 226, labels[i], { fontFamily: FONT.body, fontSize: '17px', fontStyle: '800', color: got ? CSS.paper : '#b9b4d6' }).setOrigin(0.5);
       if (got) this.tweens.add({ targets: st, scale: 1, angle: { from: -40, to: 0 }, delay: 300 + i * 280, duration: 380, ease: 'Back.Out', onStart: () => AudioManager.play('coin') });
     }
     const t = Math.round(r.time * 10) / 10, m = Math.floor(t / 60), s = (t % 60).toFixed(1).padStart(4, '0');
@@ -42,7 +42,7 @@ export class ResultsScene extends Phaser.Scene {
         : new Button(this, W / 2 + 230, 430, 'Chapitre 2', () => {}, { w: 200, disabled: true, note: 'bientôt' }),
     ];
     this.group = new ButtonGroup(items, next ? 2 : 1);
-    this.add.text(W / 2, 500, 'Espace, Entrée ou Ⓐ pour continuer', { fontFamily: FONT.body, fontSize: '14px', fontStyle: '800', color: CSS.paper }).setOrigin(0.5).setAlpha(0.7);
+    this.add.text(W / 2, 500, 'Espace, Entrée ou Ⓐ pour continuer', { fontFamily: FONT.body, fontSize: '17px', fontStyle: '800', color: CSS.paper }).setOrigin(0.5).setAlpha(0.85);
     this.ready = this.time.now + 600;   // évite de valider avec la touche de saut encore enfoncée
     InputManager.swallow();
     fadeIn(this);

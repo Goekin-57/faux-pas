@@ -205,6 +205,7 @@ export class MenuScene extends Phaser.Scene {
       { t: () => `Effets sonores : ${pct(s.sfx)}`, side: (dx) => { s.sfx = Phaser.Math.Clamp(s.sfx + dx * 0.1, 0, 1); }, press: () => { s.sfx = s.sfx >= 1 ? 0 : Math.min(1, s.sfx + 0.1); } },
       { t: () => `Réduire animations et flashs : ${s.reduceFx ? 'oui' : 'non'}`, side: () => { s.reduceFx = !s.reduceFx; }, press: () => { s.reduceFx = !s.reduceFx; } },
       { t: () => `Tremblements d'écran : ${s.shake ? 'oui' : 'non'}`, side: () => { s.shake = !s.shake; }, press: () => { s.shake = !s.shake; } },
+      { t: () => `Lisibilité renforcée : ${s.readable ? 'oui' : 'non'}`, side: () => { s.readable = !s.readable; }, press: () => { s.readable = !s.readable; } },
     ];
     const btns: { t: string; fn: () => void; primary: boolean }[] = rows.map((r) => ({ t: r.t(), fn: () => {}, primary: false }));
     btns.push({ t: 'Retour', fn: () => this.closePanel(), primary: true });

@@ -35,26 +35,33 @@ v2/
 │   ├── save/             SaveManager : sauvegarde versionnée + reprise de l'ancienne
 │   ├── audio/            AudioManager : sons et musiques synthétisés
 │   ├── entities/         Player (contrôleur), HeroArt (persos animés)
-│   ├── levels/           Terrain (sols, parallaxe), level1 (données du niveau)
-│   ├── traps/            pièges modulaires
-│   ├── ui/               boutons, transitions, commandes tactiles
+│   ├── levels/           Terrain (sols, parallaxe), chapter1 (8 niveaux), types
+│   ├── traps/            Ch1Traps : pièges à indices (papillons, coccinelles, porte qui fuit, plateforme timide, œils et câbles, stalactites, orage)
+│   ├── ui/               boutons, transitions, commandes tactiles, Hints (indications lisibles)
 │   └── scenes/           Boot, Menu, Game, Pause, Results
 └── tests/
 ```
 
-## État d'avancement (phase 2 : tranche verticale)
+## État d'avancement (chapitre 1 « Le Pré des Mensonges », refonte game design V2)
 
-Fait et vérifié par les tests :
+Huit niveaux : 1-1 Le sol est ton ami · 1-2 Fleurs de malheur · 1-3 Solide sous garantie · 1-4 Saute, pour voir… ·
+1-5 Pont de confiance · 1-6 Rebondissement ! · 1-7 Un ciel piquant · 1-8 Mégaroc.
 
-- Menu principal vivant : ciel, rayons de soleil, deux plans de parallaxe, fleurs et arbre qui bougent, oiseaux, papillons, escargot qui se cache quand un pic sort, perso animé (respiration, clignement, regard, petit saut, surprise), logo animé dont le « F » trébuche.
-- Boutons : Continuer/Jouer, Nouvelle partie (avec confirmation), Paramètres (volumes, réduction des effets, tremblements), Statistiques. Souris, clavier, manette, tactile.
-- Niveau 1-1 complet et court (≈ 3 600 px) : pas de barre de vie affichée, mais un ennemi ne tue pas d'un coup (3 coups ; un pansement apparaît sur le perso à chaque coup), invulnérabilité 1,4 s, drapeau de sauvegarde, pièces, écran de résultats avec étoiles, sauvegarde.
-- Un gag différent à chaque étape, sans répétition : trou → faux sol fissuré → pics cachés (l'herbe tremble) → escargot → ressort paresseux → pics qui déménagent après une mort → fleur qui mord → fausse sortie en carton qui tombe et devient un pont. Zone de commandes inversées prête (machine à états avec hystérésis), gardée pour un autre niveau.
-- Physique d'origine : gravité 1800, saut 620, vitesse 260, coyote time, saut mémorisé, saut variable.
-- Pause (Échap / Start), recommencer (R / Y), conseils après plusieurs morts au même endroit.
+Principes :
 
-Pas encore fait :
+- Le joueur comprend en regardant : chaque piège se trahit avant d'agir (dalle qui tremble et lâche des cailloux,
+  fleur qui se tourne et referme ses pétales, ombre qui grandit, planche sombre et trouée, câble visible entre un
+  capteur et ce qu'il déclenche, coccinelle qui saute par-dessus le faux sol, papillon croqué sous tes yeux…).
+- Texte : une seule bulle à la fois, opaque, sombre sur clair (≈ 15:1), 24 px (28 px en « Lisibilité renforcée »),
+  2 lignes max, posée près de l'élément et jamais sur le personnage. Les panneaux ne servent plus qu'aux gags.
+- Après une mort : le niveau est reconstruit, un petit fantôme marque l'endroit, le soleil se moque (une phrase),
+  et après 2 morts au même endroit un repère lumineux + un mot apparaissent. Les variantes rendent parfois les choses
+  plus simples (porte fatiguée, rocher plus lent), jamais arbitrairement plus dures.
+- Option « Lisibilité renforcée » (Paramètres) : textes plus grands, fonds blancs, contours épais, messages plus longs,
+  indices renforcés.
 
-- Carte du monde, personnalisation (boutons affichés « bientôt », désactivés).
-- Niveaux 1-2 à 5-8, boss, Halloween.
-- Persos et soleil : dessinés par le code en attendant les images définitives. L'escargot vient du pack Kenney (CC0).
+Tests : `node v2/tests/chapter1.mjs` (robot qui joue les 7 niveaux + scénarios de pièges + boss),
+`node v2/tests/shots.mjs <dossier>` (captures de lisibilité).
+
+Pas encore fait : chapitres 2 à 5, carte du monde, personnalisation ; persos, soleil et Mégaroc dessinés par le code
+en attendant les images définitives.

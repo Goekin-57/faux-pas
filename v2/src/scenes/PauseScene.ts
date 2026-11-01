@@ -18,6 +18,7 @@ export class PauseScene extends Phaser.Scene {
       new Button(this, W / 2, 382, 'Menu principal', () => { this.scene.stop('Game'); this.scene.start('Menu'); }),
     ];
     this.group = new ButtonGroup(items, 0);
+    this.events.off('update');   // la scène est relancée à chaque pause : un seul écouteur
     this.events.on('update', () => {
       const nav = InputManager.nav(); if (nav) this.group.move(nav.x, nav.y);
       if (InputManager.pressed('confirm')) this.group.press();
